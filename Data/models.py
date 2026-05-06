@@ -12,6 +12,7 @@ class TipIzziva(str, Enum):
     TEDENSKA_RAZDALJA = "tedenska_razdalja"
 
 
+@dataclass_json
 @dataclass
 class Uporabnik:
     id: int = field(default=0)
@@ -28,6 +29,7 @@ class UporabnikDto:
     stanje: int = field(default=0)
 
 
+@dataclass_json
 @dataclass
 class Tek:
     id: int = field(default=0)
@@ -37,6 +39,7 @@ class Tek:
     uporabnik: int = field(default=0)
 
 
+@dataclass_json
 @dataclass
 class Izziv:
     id: int = field(default=0)
@@ -63,6 +66,7 @@ class IzzivDto:
     zmagovalec_ime: str = field(default="")
 
 
+@dataclass_json
 @dataclass
 class Transakcija:
     id: int = field(default=0)
