@@ -6,9 +6,11 @@ psycopg2.extensions.register_type(
 import Data.auth_public as auth_public
 import datetime
 import os
+import bcrypt
 
-from Data.models import Tek, Transakcija
-from typing import List
+from psycopg2 import sql
+from Data.models import Tek, Izziv, TipIzziva, Transakcija, UporabnikDto, Uporabnik
+from typing import List, Optional
 
 DB_PORT = os.environ.get("POSTGRES_PORT", 5432)
 
@@ -21,27 +23,256 @@ class Repo:
             user=auth_public.user,
             password=auth_public.password,
         )
-        self.cur = self.conn.cursor(cursor_factory=psycopg2.extras.DictCursor)
 
-    def dobi_teke(self) -> List[Tek]:
-        self.cur.execute("""
-            SELECT id, datum, razdalja, trajanje, uporabnik
-            FROM tek
-            ORDER BY datum desc
-            """)
+    def _dobi_mejo_razdalje(self, vrsta_izziva: TipIzziva) -> tuple[float, float]:
+        meje = {
+            TipIzziva.PET_KM: (5.0, 5.5),
+            TipIzziva.DESET_KM: (10.0, 10.5),
+            TipIzziva.POL_MARATON: (21.1, 22.0),
+            TipIzziva.MARATON: (42.2, 43.0),
+        }
 
-        teki = [Tek.from_dict(row) for row in self.cur.fetchall()]
-        return teki
+        return meje.get(vrsta_izziva, (0.0, float("inf")))
+
+    # --- UPORABNIK ---
+
+    def dodaj_uporabnika(self, uporabnik: Uporabnik) -> UporabnikDto:
+        with self.conn:
+            with self.conn.cursor(cursor_factory=psycopg2.extras.DictCursor) as cur:
+                cur.execute(
+                    """
+                    INSERT INTO uporabnik (uporabnisko_ime, geslo, stanje)
+                    VALUES (%s, %s, 100)
+                    RETURNING id, uporabnisko_ime, stanje
+                    """,
+                    (uporabnik.uporabnisko_ime, uporabnik.geslo),
+                )
+
+                return UporabnikDto.from_dict(cur.fetchone())
+
+    def dobi_uporabnika(self, uporabnisko_ime: int) -> Uporabnik:
+        with self.conn:
+            with self.conn.cursor(cursor_factory=psycopg2.extras.DictCursor) as cur:
+                cur.execute(
+                    """
+                    SELECT id, uporabnisko_ime, geslo, stanje
+                    FROM uporabnik
+                    WHERE uporabnisko_ime = %s
+                    """,
+                    (uporabnisko_ime,),
+                )
+
+                vrstica = cur.fetchone()
+                if vrstica is None:
+                    raise ValueError(
+                        f"Uporabnik z uporabniškim imenom {uporabnisko_ime} ne obstaja!"
+                    )
+
+                return Uporabnik.from_dict(vrstica)
+
+    # --- TEKI ---
+
+    def dodaj_tek(
+        self,
+        uporabnik_id: int,
+        datum: datetime.datetime,
+        razdalja: float,
+        trajanje: int,
+    ) -> Tek:
+        with self.conn:
+            with self.conn.cursor(cursor_factory=psycopg2.extras.DictCursor) as cur:
+                cur.execute(
+                    """
+                    INSERT INTO tek (datum, razdalja, trajanje, uporabnik)
+                    VALUES (%s, %s, %s, %s)
+                    RETURNING id, datum, razdalja, trajanje, uporabnik
+                    """,
+                    (datum, razdalja, trajanje, uporabnik_id),
+                )
+
+                return Tek.from_dict(cur.fetchone())
 
     def dobi_tek(self, id: int) -> Tek:
-        self.cur.execute(
-            """
-            SELECT id, datum, razdalja, trajanje, uporabnik
-            FROM tek
-            WHERE id = %s
-            """,
-            (id,),
+        with self.conn:
+            with self.conn.cursor(cursor_factory=psycopg2.extras.DictCursor) as cur:
+                cur.execute(
+                    """
+                    SELECT id, datum, razdalja, trajanje, uporabnik
+                    FROM tek
+                    WHERE id = %s
+                    """,
+                    (id,),
+                )
+
+                vrstica = cur.fetchone()
+                if vrstica is None:
+                    raise ValueError(f"Tek z IDjem {id} ne obstaja!")
+                return Tek.from_dict(vrstica)
+
+    def dobi_teke(self) -> List[Tek]:
+        with self.conn:
+            with self.conn.cursor(cursor_factory=psycopg2.extras.DictCursor) as cur:
+                cur.execute("""
+                    SELECT id, datum, razdalja, trajanje, uporabnik
+                    FROM tek
+                    ORDER BY datum DESC
+                    """)
+
+                return [Tek.from_dict(row) for row in cur.fetchall()]
+
+    def dobi_teke_uporabnika(self, uporabnik_id: int) -> List[Tek]:
+        with self.conn:
+            with self.conn.cursor(cursor_factory=psycopg2.extras.DictCursor) as cur:
+                cur.execute(
+                    """
+                    SELECT id, datum, razdalja, trajanje, uporabnik
+                    FROM tek
+                    WHERE uporabnik = %s
+                    ORDER BY datum DESC
+                    """,
+                    (uporabnik_id,),
+                )
+
+                return [Tek.from_dict(row) for row in cur.fetchall()]
+
+    def dobi_teke_uporabnika_za_izziv(
+        self,
+        uporabnik_id: int,
+        datum_zacetka: datetime.datetime,
+        vrsta_izziva: TipIzziva,
+    ) -> List[Tek]:
+        min_razdalja, max_razdalja = self._dobi_mejo_razdalje(vrsta_izziva)
+        datum_konca = datum_zacetka + datetime.timedelta(days=7)
+
+        razdalja_pogoj_str = (
+            "AND razdalja >= %(min_razdalja)s AND razdalja <= %(max_razdalja)s"
+            if vrsta_izziva != TipIzziva.TEDENSKA_RAZDALJA
+            else ""
         )
 
-        t = Tek.from_dict(self.cur.fetchone())
-        return t
+        query = sql.SQL("""
+            SELECT id, datum, razdalja, trajanje, uporabnik
+            FROM tek
+            WHERE uporabnik = %s 
+              AND datum >= %s AND datum < %s 
+              {razdalja_pogoj}
+            ORDER BY datum DESC
+            """).format(razdalja_pogoj=sql.SQL(razdalja_pogoj_str))
+
+        with self.conn:
+            with self.conn.cursor(cursor_factory=psycopg2.extras.DictCursor) as cur:
+                cur.execute(
+                    query,
+                    {
+                        "uporabnik": uporabnik_id,
+                        "datum_zacetka": datum_zacetka,
+                        "datum_konca": datum_konca,
+                        "min_razdalja": min_razdalja,
+                        "max_razdalja": max_razdalja,
+                    },
+                )
+
+                return [Tek.from_dict(row) for row in cur.fetchall()]
+
+    # --- IZZIV ---
+
+    def dodaj_izziv(
+        self,
+        vrsta: TipIzziva,
+        stava: int,
+        datum_zacetka: datetime.datetime,
+        uporabnik_stavi: int,
+        uporabnik_nasprotuje: int,
+    ) -> Izziv:
+        with self.conn:
+            with self.conn.cursor(cursor_factory=psycopg2.extras.DictCursor) as cur:
+                cur.execute(
+                    """
+                    INSERT INTO izziv (vrsta, stava, datum_zacetka, uporabnik_stavi, uporabnik_nasprotuje)
+                    VALUES (%s, %s, %s, %s, %s)
+                    RETURNING id, vrsta, stava, datum_zacetka, uporabnik_stavi, uporabnik_nasprotuje, zmagovalec
+                    """,
+                    (
+                        vrsta.value,
+                        stava,
+                        datum_zacetka,
+                        uporabnik_stavi,
+                        uporabnik_nasprotuje,
+                    ),
+                )
+
+                return Izziv.from_dict(cur.fetchone())
+
+    def dobi_izziv(self, id: int) -> Izziv:
+        with self.conn:
+            with self.conn.cursor(cursor_factory=psycopg2.extras.DictCursor) as cur:
+                cur.execute(
+                    """
+                    SELECT id, vrsta, stava, datum_zacetka, uporabnik_stavi,        uporabnik_nasprotuje, zmagovalec
+                    FROM izziv
+                    WHERE id = %s
+                    """,
+                    (id,),
+                )
+
+                vrstica = cur.fetchone()
+                if vrstica is None:
+                    raise ValueError(f"Izziv z IDjem {id} ne obstaja!")
+                return Izziv.from_dict(vrstica)
+
+    def dobi_izzive_uporabnika(self, uporabnik_id: int) -> List[Izziv]:
+        with self.conn:
+            with self.conn.cursor(cursor_factory=psycopg2.extras.DictCursor) as cur:
+                cur.execute(
+                    """
+                    SELECT id, vrsta, stava, datum_zacetka, uporabnik_stavi, uporabnik_nasprotuje, zmagovalec
+                    FROM izziv
+                    WHERE uporabnik_stavi = %s OR uporabnik_nasprotuje = %s
+                    ORDER BY datum_zacetka DESC
+                    """,
+                    (uporabnik_id, uporabnik_id),
+                )
+                return [Izziv.from_dict(row) for row in cur.fetchall()]
+
+    # --- TRANSAKCIJE ---
+
+    def izvedi_izplacilo_izziva(
+        self, izziv_id: int, zmagovalec_id: int, porazenec_id: int, stava: int
+    ) -> None:
+        with self.conn:
+            with self.conn.cursor(cursor_factory=psycopg2.extras.DictCursor) as cur:
+                cur.execute(
+                    """
+                    UPDATE uporabnik 
+                    SET stanje = stanje + %s 
+                    WHERE id = %s
+                    """,
+                    (stava, zmagovalec_id),
+                )
+
+                cur.execute(
+                    """
+                    UPDATE uporabnik 
+                    SET stanje = stanje - %s 
+                    WHERE id = %s
+                    """,
+                    (stava, porazenec_id),
+                )
+
+                cas_transakcije = datetime.datetime.now()
+                cur.execute(
+                    """
+                    INSERT INTO transakcija (sprememba, cas, uporabnik, izziv)
+                    VALUES (%s, %s, %s, %s), (%s, %s, %s, %s)
+                    """,
+                    (
+                        stava,
+                        cas_transakcije,
+                        zmagovalec_id,
+                        izziv_id,
+                        -stava,
+                        cas_transakcije,
+                        porazenec_id,
+                        izziv_id,
+                    ),
+                )
