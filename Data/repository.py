@@ -9,7 +9,15 @@ import os
 import bcrypt
 
 from psycopg2 import sql
-from Data.models import Tek, Izziv, TipIzziva, Transakcija, UporabnikDto, Uporabnik
+from Data.models import (
+    Tek,
+    Izziv,
+    TipIzziva,
+    Transakcija,
+    UporabnikDto,
+    Uporabnik,
+    ZACETNO_STANJE,
+)
 from typing import List, Optional
 
 DB_PORT = os.environ.get("POSTGRES_PORT", 5432)
@@ -23,6 +31,54 @@ class Repo:
             user=auth_public.user,
             password=auth_public.password,
         )
+
+    def ustvari_tabele(self) -> None:
+        with self.conn:
+            with self.conn.cursor() as cur:
+                # Uporabnik
+                cur.execute(sql.SQL("""
+                    CREATE TABLE IF NOT EXISTS uporabnik (
+                        id SERIAL PRIMARY KEY,
+                        uporabnisko_ime TEXT NOT NULL UNIQUE,
+                        geslo TEXT,
+                        stanje INTEGER NOT NULL DEFAULT {zacetno_stanje}
+                    )
+                    """).format(ZACETNO_STANJE=sql.Literal(ZACETNO_STANJE)))
+
+                # Tek
+                cur.execute("""
+                    CREATE TABLE IF NOT EXISTS tek (
+                        id SERIAL PRIMARY KEY,
+                        datum TIMESTAMP NOT NULL,
+                        razdalja FLOAT NOT NULL,
+                        trajanje INTEGER NOT NULL,
+                        uporabnik INTEGER NOT NULL REFERENCES uporabnik(id)
+                    )
+                    """)
+
+                # Izziv
+                cur.execute("""
+                    CREATE TABLE IF NOT EXISTS izziv (
+                        id SERIAL PRIMARY KEY,
+                        vrsta TEXT NOT NULL,
+                        stava INTEGER NOT NULL,
+                        datum_zacetka TIMESTAMP NOT NULL,
+                        uporabnik_stavi INTEGER NOT NULL REFERENCES uporabnik(id),
+                        uporabnik_nasprotuje INTEGER NOT NULL REFERENCES uporabnik(id),
+                        zmagovalec INTEGER REFERENCES uporabnik(id)
+                    )
+                    """)
+
+                # Transakcija
+                cur.execute("""
+                    CREATE TABLE IF NOT EXISTS transakcija (
+                        id SERIAL PRIMARY KEY,
+                        sprememba INTEGER NOT NULL,
+                        cas TIMESTAMP NOT NULL DEFAULT (NOW()),
+                        uporabnik INTEGER NOT NULL REFERENCES uporabnik(id),
+                        izziv INTEGER REFERENCES izziv(id)
+                    )
+                    """)
 
     def _dobi_mejo_razdalje(self, vrsta_izziva: TipIzziva) -> tuple[float, float]:
         meje = {
@@ -42,10 +98,10 @@ class Repo:
                 cur.execute(
                     """
                     INSERT INTO uporabnik (uporabnisko_ime, geslo, stanje)
-                    VALUES (%s, %s, 100)
+                    VALUES (%s, %s, %s)
                     RETURNING id, uporabnisko_ime, stanje
                     """,
-                    (uporabnik.uporabnisko_ime, uporabnik.geslo),
+                    (uporabnik.uporabnisko_ime, uporabnik.geslo, ZACETNO_STANJE),
                 )
 
                 return UporabnikDto.from_dict(cur.fetchone())
