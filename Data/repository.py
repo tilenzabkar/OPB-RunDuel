@@ -106,7 +106,7 @@ class Repo:
 
                 return UporabnikDto.from_dict(cur.fetchone())
 
-    def dobi_uporabnika(self, uporabnisko_ime: int) -> Uporabnik:
+    def dobi_uporabnika(self, uporabnisko_ime: str) -> Uporabnik:
         with self.conn:
             with self.conn.cursor(cursor_factory=psycopg2.extras.DictCursor) as cur:
                 cur.execute(
@@ -209,8 +209,8 @@ class Repo:
         query = sql.SQL("""
             SELECT id, datum, razdalja, trajanje, uporabnik
             FROM tek
-            WHERE uporabnik = %s 
-              AND datum >= %s AND datum < %s 
+            WHERE uporabnik = %(uporabnik)s 
+              AND datum >= %(datum_zacetka)s AND datum < %(datum_konca)s 
               {razdalja_pogoj}
             ORDER BY datum DESC
             """).format(razdalja_pogoj=sql.SQL(razdalja_pogoj_str))
@@ -289,6 +289,18 @@ class Repo:
                     (uporabnik_id, uporabnik_id),
                 )
                 return [Izziv.from_dict(row) for row in cur.fetchall()]
+
+    def nastavi_zmagovalca(self, izziv_id: int, zmagovalec_id: int) -> None:
+        with self.conn():
+            with self.conn.cursor() as cur:
+                cur.execute(
+                    """
+                    UPDATE izziv
+                    SET zmagovalec = %s
+                    WHERE id = %s
+                    """,
+                    (zmagovalec_id, izziv_id),
+                )
 
     # --- TRANSAKCIJE ---
 
