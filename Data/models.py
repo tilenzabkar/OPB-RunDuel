@@ -12,13 +12,16 @@ class TipIzziva(str, Enum):
     TEDENSKA_RAZDALJA = "tedenska_razdalja"
 
 
+ZACETNO_STANJE = 100
+
+
 @dataclass_json
 @dataclass
 class Uporabnik:
     id: int = field(default=0)
     uporabnisko_ime: str = field(default="")
     geslo: str = field(default="")
-    stanje: int = field(default=0)
+    stanje: int = field(default=ZACETNO_STANJE)
 
 
 @dataclass_json
@@ -26,7 +29,7 @@ class Uporabnik:
 class UporabnikDto:
     id: int = field(default=0)
     uporabnisko_ime: str = field(default="")
-    stanje: int = field(default=0)
+    stanje: int = field(default=ZACETNO_STANJE)
 
 
 @dataclass_json
