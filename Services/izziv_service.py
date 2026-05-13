@@ -1,7 +1,7 @@
 import datetime
 
 from Data.repository import Repo
-from Data.models import TipIzziva, Izziv, Tek
+from Data.models import TipIzziva, Izziv, Tek, IzzivDto
 
 from typing import List
 
@@ -61,6 +61,9 @@ class IzzivService:
         uporabnik_stavi_id: int,
         uporabnik_nasprotuje_id: int,
     ) -> Izziv:
+        """
+        Ustvari izziv za dana dva uporabnika in jima odvzame stavo. Vrne ustvarjen izziv.
+        """
 
         uporabnik_stavi = self.repo.dobi_uporabnika_po_id(uporabnik_stavi_id)
         uporabnik_nasprotuje = self.repo.dobi_uporabnika_po_id(uporabnik_nasprotuje_id)
@@ -75,14 +78,27 @@ class IzzivService:
                 f"Uporabnik {uporabnik_nasprotuje.uporabnisko_ime} nima dovolj kovancev za to stavo!"
             )
 
-        return self.repo.dodaj_izziv(
+        ustvarjen_izziv = self.repo.dodaj_izziv(
             vrsta, stava, datum_zacetka, uporabnik_stavi_id, uporabnik_nasprotuje_id
         )
 
-    def dobi_izzive(self, uporabnik_id: int) -> List[Izziv]:
+        self.repo.rezerviraj_sredstva_za_izziv(
+            ustvarjen_izziv.id, uporabnik_stavi_id, uporabnik_nasprotuje_id, stava
+        )
+
+        return ustvarjen_izziv
+
+    def dobi_izzive(self, uporabnik_id: int) -> List[IzzivDto]:
+        """
+        Vrne vse izzive, kjer je dan uporabnik udeležen.
+        """
         return self.repo.dobi_izzive_uporabnika(uporabnik_id)
 
     def zakljuci_izziv(self, izziv_id: int) -> None:
+        """
+        Za dan izziv določi zmagovalca in opravi izplačilo stave. V primeru remija vrne prvotne stave.
+        """
+
         izziv = self.repo.dobi_izziv(izziv_id)
 
         if izziv.zmagovalec is not None:  # zmagovalec je že določen
@@ -110,6 +126,9 @@ class IzzivService:
         if zmagovalec_id is not None and porazenec_id is not None:
             self.repo.nastavi_zmagovalca(izziv_id, zmagovalec_id)
 
-            self.repo.izvedi_izplacilo_izziva(
-                izziv_id, zmagovalec_id, porazenec_id, izziv.stava
+            self.repo.izvedi_izplacilo_izziva(izziv_id, zmagovalec_id, izziv.stava)
+
+        else:  # Remi, vrnemo stave
+            self.repo.vrni_stave_izziva(
+                izziv_id, izziv.uporabnik_stavi, izziv.uporabnik_nasprotuje, izziv.stava
             )

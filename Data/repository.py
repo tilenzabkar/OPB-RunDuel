@@ -13,6 +13,7 @@ from Data.models import (
     Tek,
     Izziv,
     TipIzziva,
+    IzzivDto,
     Transakcija,
     UporabnikDto,
     Uporabnik,
@@ -305,19 +306,32 @@ class Repo:
                     raise ValueError(f"Izziv z IDjem {id} ne obstaja!")
                 return Izziv.from_dict(vrstica)
 
-    def dobi_izzive_uporabnika(self, uporabnik_id: int) -> List[Izziv]:
+    def dobi_izzive_uporabnika(self, uporabnik_id: int) -> List[IzzivDto]:
         with self.conn:
             with self.conn.cursor(cursor_factory=psycopg2.extras.DictCursor) as cur:
                 cur.execute(
                     """
-                    SELECT id, vrsta, stava, datum_zacetka, uporabnik_stavi, uporabnik_nasprotuje, zmagovalec
-                    FROM izziv
-                    WHERE uporabnik_stavi = %s OR uporabnik_nasprotuje = %s
-                    ORDER BY datum_zacetka DESC
+                    SELECT 
+                        i.id AS id, 
+                        i.vrsta AS vrsta, 
+                        i.stava AS stava, 
+                        i.datum_zacetka AS datum_zacetka, 
+                        i.uporabnik_stavi AS uporabnik_stavi, 
+                        stavi.uporabnisko_ime AS uporabnik_stavi_ime, 
+                        i.uporabnik_nasprotuje AS uporabnik_nasprotuje, 
+                        nasprotuje.uporabnisko_ime AS uporabnik_nasprotuje_ime,
+                        i.zmagovalec AS zmagovalec,
+                        COALESCE(zmaga.uporabnisko_ime, '') AS zmagovalec_ime
+                    FROM izziv AS i
+                    JOIN uporabnik AS stavi ON stavi.id = i.uporabnik_stavi
+                    JOIN uporabnik AS nasprotuje ON nasprotuje.id = i.uporabnik_nasprotuje
+                    LEFT JOIN uporabnik AS zmaga ON zmaga.id = i.zmagovalec
+                    WHERE i.uporabnik_stavi = %s OR i.uporabnik_nasprotuje = %s
+                    ORDER BY i.datum_zacetka DESC
                     """,
                     (uporabnik_id, uporabnik_id),
                 )
-                return [Izziv.from_dict(row) for row in cur.fetchall()]
+                return [IzzivDto.from_dict(row) for row in cur.fetchall()]
 
     def nastavi_zmagovalca(self, izziv_id: int, zmagovalec_id: int) -> None:
         with self.conn:
@@ -333,23 +347,6 @@ class Repo:
 
     # --- TRANSAKCIJE ---
 
-    def dodaj_transakcijo(
-        self, sprememba: int, uporabnik_id: int, izziv_id: int = None
-    ) -> Transakcija:
-        cas_transakcije = datetime.datetime.now()
-        with self.conn:
-            with self.conn.cursor(cursor_factory=psycopg2.extras.DictCursor) as cur:
-                cur.execute(
-                    """
-                    INSERT INTO transakcija (sprememba, cas, uporabnik, izziv)
-                    VALUES (%s, %s, %s, %s)
-                    RETURNING id, sprememba, cas, uporabnik, izziv
-                    """,
-                    (sprememba, cas_transakcije, uporabnik_id, izziv_id),
-                )
-
-                return Transakcija.from_dict(cur.fetchone())
-
     def rezerviraj_sredstva_za_izziv(
         self,
         izziv_id: int,
@@ -359,6 +356,7 @@ class Repo:
     ) -> None:
         with self.conn:
             with self.conn.cursor() as cur:
+                cas_transakcije = datetime.datetime.now()
                 cur.execute(
                     """
                    UPDATE uporabnik
@@ -368,13 +366,28 @@ class Repo:
                     (stava, uporabnik_stavi_id, uporabnik_nasprotuje_id),
                 )
 
-        self.dodaj_transakcijo(-stava, uporabnik_stavi_id, izziv_id)
-        self.dodaj_transakcijo(-stava, uporabnik_nasprotuje_id, izziv_id)
+                cur.execute(
+                    """
+                    INSERT INTO transakcija (sprememba, cas, uporabnik, izziv)
+                    VALUES (%s, %s, %s, %s), (%s, %s, %s, %s)
+                    """,
+                    (
+                        -stava,
+                        cas_transakcije,
+                        uporabnik_stavi_id,
+                        izziv_id,
+                        -stava,
+                        cas_transakcije,
+                        uporabnik_nasprotuje_id,
+                        izziv_id,
+                    ),
+                )
 
     def izvedi_izplacilo_izziva(
-        self, izziv_id: int, zmagovalec_id: int, porazenec_id: int, stava: int
+        self, izziv_id: int, zmagovalec_id: int, stava: int
     ) -> None:
         dobitek = 2 * stava  # zmagovalcu moramo vrniti tudi rezervirana sredstva
+        cas_transakcije = datetime.datetime.now()
 
         with self.conn:
             with self.conn.cursor() as cur:
@@ -387,4 +400,45 @@ class Repo:
                     (dobitek, zmagovalec_id),
                 )
 
-        self.dodaj_transakcijo(dobitek, zmagovalec_id, izziv_id)
+                cur.execute(
+                    """
+                    INSERT INTO transakcija (sprememba, cas, uporabnik, izziv)
+                    VALUES (%s, %s, %s, %s)
+                    """,
+                    (dobitek, cas_transakcije, zmagovalec_id, izziv_id),
+                )
+
+    def vrni_stave_izziva(
+        self,
+        izziv_id: int,
+        uporabnik_stavi_id: int,
+        uporabnik_nasprotuje_id: int,
+        stava: int,
+    ) -> None:
+        cas_transakcije = datetime.datetime.now()
+        with self.conn:
+            with self.conn.cursor() as cur:
+                cur.execute(
+                    """
+                    UPDATE uporabnik
+                    SET stanje = stanje + %s
+                    WHERE id IN (%s, %s)
+                    """,
+                    (stava, uporabnik_stavi_id, uporabnik_nasprotuje_id),
+                )
+                cur.execute(
+                    """
+                    INSERT INTO transakcija (sprememba, cas, uporabnik, izziv)
+                    VALUES (%s, %s, %s, %s), (%s, %s, %s, %s)
+                    """,
+                    (
+                        stava,
+                        cas_transakcije,
+                        uporabnik_stavi_id,
+                        izziv_id,
+                        stava,
+                        cas_transakcije,
+                        uporabnik_nasprotuje_id,
+                        izziv_id,
+                    ),
+                )
