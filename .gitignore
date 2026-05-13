@@ -1,5 +1,6 @@
 venv/
 *pycache*
 *DS_STORE
+.env
 
 er-diagram.drawio
