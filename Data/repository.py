@@ -320,7 +320,7 @@ class Repo:
                 return [Izziv.from_dict(row) for row in cur.fetchall()]
 
     def nastavi_zmagovalca(self, izziv_id: int, zmagovalec_id: int) -> None:
-        with self.conn():
+        with self.conn:
             with self.conn.cursor() as cur:
                 cur.execute(
                     """
