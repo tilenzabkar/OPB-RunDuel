@@ -18,7 +18,7 @@ from Data.models import (
     Uporabnik,
     ZACETNO_STANJE,
 )
-from typing import List, Optional
+from typing import List
 
 DB_PORT = os.environ.get("POSTGRES_PORT", 5432)
 
@@ -125,6 +125,35 @@ class Repo:
                     )
 
                 return Uporabnik.from_dict(vrstica)
+
+    def dobi_uporabnika_po_id(self, uporabnik_id: int) -> Uporabnik:
+        with self.conn:
+            with self.conn.cursor(cursor_factory=psycopg2.extras.DictCursor) as cur:
+                cur.execute(
+                    """
+                    SELECT id, uporabnisko_ime, geslo, stanje
+                    FROM uporabnik
+                    WHERE id = %s
+                    """,
+                    (uporabnik_id,),
+                )
+
+                vrstica = cur.fetchone()
+                if vrstica is None:
+                    raise ValueError(f"Uporabnik z IDjem {uporabnik_id} ne obstaja!")
+
+                return Uporabnik.from_dict(vrstica)
+
+    def dobi_vse_uporabnike(self) -> List[UporabnikDto]:
+        with self.conn:
+            with self.conn.cursor(cursor_factory=psycopg2.extras.DictCursor) as cur:
+                cur.execute("""
+                    SELECT id, uporabnisko_ime, stanje
+                    FROM uporabnik
+                    ORDER BY stanje DESC
+                    """)
+
+                return [UporabnikDto.from_dict(row) for row in cur.fetchall()]
 
     # --- TEKI ---
 
@@ -304,43 +333,58 @@ class Repo:
 
     # --- TRANSAKCIJE ---
 
+    def dodaj_transakcijo(
+        self, sprememba: int, uporabnik_id: int, izziv_id: int = None
+    ) -> Transakcija:
+        cas_transakcije = datetime.datetime.now()
+        with self.conn:
+            with self.conn.cursor(cursor_factory=psycopg2.extras.DictCursor) as cur:
+                cur.execute(
+                    """
+                    INSERT INTO transakcija (sprememba, cas, uporabnik, izziv)
+                    VALUES (%s, %s, %s, %s)
+                    RETURNING id, sprememba, cas, uporabnik, izziv
+                    """,
+                    (sprememba, cas_transakcije, uporabnik_id, izziv_id),
+                )
+
+                return Transakcija.from_dict(cur.fetchone())
+
+    def rezerviraj_sredstva_za_izziv(
+        self,
+        izziv_id: int,
+        uporabnik_stavi_id: int,
+        uporabnik_nasprotuje_id: int,
+        stava: int,
+    ) -> None:
+        with self.conn:
+            with self.conn.cursor() as cur:
+                cur.execute(
+                    """
+                   UPDATE uporabnik
+                   SET stanje = stanje - %s
+                   WHERE id in (%s, %s)
+                   """,
+                    (stava, uporabnik_stavi_id, uporabnik_nasprotuje_id),
+                )
+
+        self.dodaj_transakcijo(-stava, uporabnik_stavi_id, izziv_id)
+        self.dodaj_transakcijo(-stava, uporabnik_nasprotuje_id, izziv_id)
+
     def izvedi_izplacilo_izziva(
         self, izziv_id: int, zmagovalec_id: int, porazenec_id: int, stava: int
     ) -> None:
+        dobitek = 2 * stava  # zmagovalcu moramo vrniti tudi rezervirana sredstva
+
         with self.conn:
-            with self.conn.cursor(cursor_factory=psycopg2.extras.DictCursor) as cur:
+            with self.conn.cursor() as cur:
                 cur.execute(
                     """
                     UPDATE uporabnik 
                     SET stanje = stanje + %s 
                     WHERE id = %s
                     """,
-                    (stava, zmagovalec_id),
+                    (dobitek, zmagovalec_id),
                 )
 
-                cur.execute(
-                    """
-                    UPDATE uporabnik 
-                    SET stanje = stanje - %s 
-                    WHERE id = %s
-                    """,
-                    (stava, porazenec_id),
-                )
-
-                cas_transakcije = datetime.datetime.now()
-                cur.execute(
-                    """
-                    INSERT INTO transakcija (sprememba, cas, uporabnik, izziv)
-                    VALUES (%s, %s, %s, %s), (%s, %s, %s, %s)
-                    """,
-                    (
-                        stava,
-                        cas_transakcije,
-                        zmagovalec_id,
-                        izziv_id,
-                        -stava,
-                        cas_transakcije,
-                        porazenec_id,
-                        izziv_id,
-                    ),
-                )
+        self.dodaj_transakcijo(dobitek, zmagovalec_id, izziv_id)
