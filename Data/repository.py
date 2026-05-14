@@ -12,7 +12,6 @@ from Data.models import (
     Izziv,
     TipIzziva,
     IzzivDto,
-    Transakcija,
     UporabnikDto,
     Uporabnik,
     ZACETNO_STANJE,
