@@ -11,3 +11,38 @@ Podprte vrste izzivov so:
 Vsak izziv traja 1 teden. Sistem beleži uporabnike, teke, izzive, stave, transkacije in trenutno stanje kovancev.
 ## ER Diagram
 ![RunDuel ER Diagram](er-diagram.png)
+
+## Namestitev in zagon projekta
+
+### 1. Priprava okolja
+
+Priporočljivo je, da ustvarite navidezno okolje:
+
+```bash
+python3 -m venv venv
+source venv/bin/activate
+```
+
+Namestite vse potrebne knjižnice:
+
+```bash
+pip install -r requirements.txt
+```
+
+### 2. Konfiguracija okolja (.env)
+
+Kopirajte datoteko `.env.example` in jo preimenujte v `.env`:
+
+```bash
+cp .env.example .env
+```
+
+Odprite ustvarjeno `.env` datoteko in vnesite svoje podatke za bazo in Strava API.
+
+### 3. Priprava podatkovne baze
+
+Zaženite skripto za pripravo tabel:
+
+```bash
+python init_db.py
+```

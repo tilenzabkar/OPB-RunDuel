@@ -3,4 +3,6 @@ venv/
 *DS_STORE
 .env
 
+Data/auth.py
+
 er-diagram.drawio

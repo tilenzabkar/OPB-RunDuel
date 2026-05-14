@@ -1,4 +1,0 @@
-db = ""
-host = ""
-user = ""
-password = ""
