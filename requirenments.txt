@@ -4,3 +4,4 @@ bottle
 bcrypt
 python-dotenv
 requests
+beaker

@@ -79,7 +79,8 @@ class StravaService:
                 )  # Strava vrne razdalje v metrih
                 trajanje_sekunde = aktivnost.get(
                     "moving_time", 0
-                )  # Strava vrne trajanje v sekundah
+                )
+                trajanje_minute = round(trajanje_sekunde / 60) # Strava vrne trajanje v sekundah
 
                 datum_str = aktivnost.get("start_date_local", "")
                 datum = datetime.fromisoformat(
@@ -87,7 +88,7 @@ class StravaService:
                 )  # Datumi iz Strave pridejo z 'Z' na koncu
 
                 tek = self.repo.dodaj_tek(
-                    uporabnik_id, datum, razdalja_km, trajanje_sekunde
+                    uporabnik_id, datum, razdalja_km, trajanje_minute
                 )
                 shranjeni_teki.append(tek)
 
