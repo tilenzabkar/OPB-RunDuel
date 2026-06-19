@@ -221,6 +221,25 @@ class Repo:
 
                 return [Tek.from_dict(row) for row in cur.fetchall()]
 
+    def posodobi_tek(
+        self, tek_id: int, datum: datetime.datetime, razdalja: float, trajanje: int
+    ) -> None:
+        with self.conn:
+            with self.conn.cursor() as cur:
+                cur.execute(
+                    """
+                    UPDATE tek
+                    SET datum = %s, razdalja = %s, trajanje = %s
+                    WHERE id = %s
+                    """,
+                    (datum, razdalja, trajanje, tek_id),
+                )
+
+    def izbrisi_tek(self, tek_id: int) -> None:
+        with self.conn:
+            with self.conn.cursor() as cur:
+                cur.execute("DELETE FROM tek WHERE id = %s", (tek_id,))
+
     # --- IZZIV ---
 
     def dodaj_izziv(
