@@ -26,7 +26,7 @@ source venv/bin/activate
 Namestite vse potrebne knjižnice:
 
 ```bash
-pip install -r requirements.txt
+pip install -r requirenments.txt
 ```
 
 ### 2. Konfiguracija okolja (.env)
