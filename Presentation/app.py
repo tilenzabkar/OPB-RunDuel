@@ -1,10 +1,13 @@
 import datetime
 import sys
 from pathlib import Path
+from urllib.parse import quote
+
 ROOT_DIR = Path(__file__).resolve().parent.parent
 sys.path.append(str(ROOT_DIR))
 
 from dotenv import load_dotenv
+
 load_dotenv(ROOT_DIR / ".env")
 
 from bottle import Bottle, request, redirect, run, static_file, template
@@ -30,6 +33,7 @@ strava_service = StravaService()
 ROOT = Path(__file__).resolve().parent.parent
 VIEWS_DIR = ROOT / "Presentation" / "views"
 STATIC_DIR = ROOT / "Presentation" / "static"
+
 
 def get_session():
     return request.environ.get("beaker.session")
@@ -68,8 +72,9 @@ def require_login():
 
 def render(view, **kwargs):
     kwargs.setdefault("user", current_user())
-    kwargs.setdefault("error", request.query.get("error") or None)
-    kwargs.setdefault("success", request.query.get("success") or None)
+    kwargs.setdefault("error", request.query.getunicode("error") or None)
+    kwargs.setdefault("success", request.query.getunicode("success") or None)
+    kwargs.setdefault("format_trajanje", _format_trajanje)
     return template(view, template_lookup=["Presentation/views"], **kwargs)
 
 
@@ -83,6 +88,7 @@ def parse_datetime(value):
 def server_static(filename):
     return static_file(filename, root=str(STATIC_DIR))
 
+
 @app.get("/")
 def index():
     return render("index.tpl")
@@ -91,7 +97,6 @@ def index():
 @app.get("/register")
 def register_get():
     return render("register.tpl")
-
 
 
 @app.post("/register")
@@ -126,7 +131,7 @@ def login_post():
 
     redirect("/dashboard")
 
-   
+
 @app.get("/logout")
 def logout():
     session = get_session()
@@ -168,6 +173,7 @@ def runs():
     teki = tek_service.dobi_teke_uporabnika(user["id"])
     return render("runs.tpl", teki=teki)
 
+
 @app.get("/strava/connect")
 def strava_connect():
     require_login()
@@ -191,10 +197,13 @@ def strava_callback():
             current_user()["id"],
             access_token,
         )
-        redirect(f"/runs?success=Uvoženih je bilo {len(shranjeni_teki)} tekov iz Strave.")
-    except Exception as e:
-        redirect(f"/runs?error=Napaka pri uvozu iz Strave: {str(e)}")
 
+        msg = f"Uvoženih je bilo {len(shranjeni_teki)} tekov iz Strave."
+        url = f"/runs?success={quote(msg)}"
+    except Exception as e:
+        url = f"/runs?error=Napaka pri uvozu iz Strave: {str(e)}"
+
+    redirect(url)
 
 
 @app.get("/runs/new")
@@ -214,11 +223,71 @@ def add_run_post():
         else:
             datum = datetime.datetime.now()
         razdalja = float(request.forms.get("razdalja"))
-        trajanje = int(request.forms.get("trajanje"))
-        tek_service.dodaj_tek(user["id"], datum, razdalja, trajanje)
-        redirect("/runs?success=Tek je bil dodan.")
+        ure = int(request.forms.get("ure"))
+        minute = int(request.forms.get("minute"))
+        sekunde = int(request.forms.get("sekunde"))
+        trajanje_sekunde = ure * 3600 + minute * 60 + sekunde
+        tek_service.dodaj_tek(user["id"], datum, razdalja, trajanje_sekunde)
+        msg = quote("Tek je bil uspešno dodan.")
+        url = f"/runs?success={msg}"
     except Exception as e:
         return render("add_run.tpl", error=str(e))
+
+    redirect(url)
+
+
+@app.get("/runs/<tek_id:int>/edit")
+def edit_run_get(tek_id):
+    require_login()
+    user = current_user()
+    try:
+        tek = tek_service.dobi_tek(tek_id)
+        if tek.uporabnik != int(user["id"]):
+            raise PermissionError("Nimate dovoljenja za urejanje tega teka.")
+        return render("edit_run.tpl", tek=tek)
+    except ValueError:
+        redirect("/runs?error=Tek ne obstaja.")
+    except PermissionError as e:
+        redirect(f"/runs?error={quote(str(e))}")
+
+
+@app.post("/runs/<tek_id:int>/edit")
+def edit_run_post(tek_id):
+    require_login()
+    user_id = current_user()["id"]
+    try:
+        datum_raw = request.forms.get("datum")
+        if datum_raw:
+            datum = datetime.datetime.fromisoformat(datum_raw)
+        else:
+            datum = datetime.datetime.now()
+        razdalja = float(request.forms.get("razdalja"))
+        ure = int(request.forms.get("ure", 0))
+        minute = int(request.forms.get("minute", 0))
+        sekunde = int(request.forms.get("sekunde", 0))
+        trajanje = ure * 3600 + minute * 60 + sekunde
+        tek_service.preveri_in_posodobi_tek(tek_id, user_id, datum, razdalja, trajanje)
+
+        msg = "Tek je bil uspešno posodobljen."
+        url = f"/runs?success={quote(msg)}"
+    except Exception as e:
+        url = f"/runs?error={quote(str(e))}"
+
+    redirect(url)
+
+
+@app.post("/runs/<tek_id:int>/delete")
+def delete_run(tek_id):
+    require_login()
+    user_id = current_user()["id"]
+    try:
+        tek_service.preveri_in_izbrisi_tek(tek_id, user_id)
+        msg = quote("Tek je bil uspešno izbrisan.")
+        url = f"/runs?success={msg}"
+    except Exception as e:
+        url = f"/runs?error={quote(str(e))}"
+
+    redirect(url)
 
 
 @app.get("/challenges")
@@ -233,8 +302,7 @@ def challenges():
 def create_challenge_get():
     require_login()
     uporabniki = [
-        u for u in user_service.dobi_vse_uporabnike()
-        if u.id != current_user()["id"]
+        u for u in user_service.dobi_vse_uporabnike() if u.id != current_user()["id"]
     ]
 
     tipi = list(TipIzziva)
@@ -264,8 +332,7 @@ def create_challenge_post():
         redirect("/challenges?success=Izziv je bil ustvarjen.")
     except Exception as e:
         uporabniki = [
-            u for u in user_service.dobi_vse_uporabnike()
-            if u.id != user["id"]
+            u for u in user_service.dobi_vse_uporabnike() if u.id != user["id"]
         ]
         tipi = list(TipIzziva)
         return render(
@@ -274,8 +341,9 @@ def create_challenge_post():
             tipi=tipi,
             error=str(e),
         )
-    
-#funkcija za testiranje
+
+
+# funkcija za testiranje
 def naredi_izziv_star_za_test(izziv_id):
     conn = psycopg2.connect(
         database=os.environ.get("DB_NAME"),
@@ -302,8 +370,8 @@ def naredi_izziv_star_za_test(izziv_id):
 def finish_challenge(izziv_id):
     require_login()
     try:
-        #za testiranje
-        #naredi_izziv_star_za_test(izziv_id)
+        # za testiranje
+        # naredi_izziv_star_za_test(izziv_id)
 
         izziv_service.zakljuci_izziv(izziv_id)
         refresh_current_user()
@@ -318,6 +386,13 @@ def finish_challenge(izziv_id):
         )
 
 
+def _format_trajanje(sekunde: int) -> str:
+    h = sekunde // 3600
+    m = (sekunde % 3600) // 60
+    s = sekunde % 60
+    return f"{f'{h}h ' if h>0 else ''}{m}min {s}s"
+
+
 session_opts = {
     "session.type": "file",
     "session.cookie_expires": 3600,
@@ -330,4 +405,3 @@ application = SessionMiddleware(app, session_opts)
 
 if __name__ == "__main__":
     run(app=application, host="localhost", port=8080, debug=True, reloader=True)
-    

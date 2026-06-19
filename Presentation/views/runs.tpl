@@ -11,6 +11,7 @@
             <th>Datum</th>
             <th>Razdalja</th>
             <th>Trajanje</th>
+            <th>Akcije</th>
         </tr>
     </thead>
 
@@ -18,15 +19,18 @@
         % for tek in teki:
             <tr>
                 <td>{{tek.datum.strftime("%d.%m.%Y %H:%M")}}</td>
-
                 <td>{{tek.razdalja}} km</td>
-
+                <td>{{format_trajanje(tek.trajanje)}}</td>
                 <td>
-                    % if tek.trajanje >= 60:
-                        {{tek.trajanje // 60}} h {{tek.trajanje % 60}} min
-                    % else:
-                        {{tek.trajanje}} min
-                    % end
+                    <a href="/runs/{{ tek.id }}/edit" class="btn btn-sm btn-warning">
+                        <i class="bi bi-pencil-square"></i>
+                    </a>
+                    
+                    <form method="post" action="/runs/{{ tek.id }}/delete" style="display:inline;">
+                        <button type="submit" class="btn btn-sm btn-danger" onclick="return confirm('Ali res želite izbrisati ta tek?');">
+                            <i class="bi bi-trash"></i>
+                        </button>
+                    </form>
                 </td>
             </tr>
         % end

@@ -38,11 +38,11 @@ class IzzivService:
 
         else:
             najhitrejsi_tek_stavi = min(
-                (tek.trajanje / tek.razdalja for tek in teki_stavi),
+                (round(tek.trajanje / 60, 2) / tek.razdalja for tek in teki_stavi),
                 default=float("inf"),
             )
             najhitrejsi_tek_nasprotuje = min(
-                (tek.trajanje / tek.razdalja for tek in teki_nasprotuje),
+                (round(tek.trajanje / 60, 2) / tek.razdalja for tek in teki_nasprotuje),
                 default=float("inf"),
             )
 

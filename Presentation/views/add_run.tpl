@@ -15,9 +15,13 @@
 
     <div class="mb-3">
         <label class="form-label">Trajanje</label>
-        <input class="form-control" type="number" name="trajanje" required>
-        <div class="form-text">
-            Vnesi trajanje v minutah. Primer: 90 pomeni 1 h 30 min.
+        <div class="input-group">
+            <input type="number" name="ure" class="form-control" min="0" value="0">
+            <span class="input-group-text">h</span>
+            <input type="number" name="minute" class="form-control" min="0" max="59" value="0">
+            <span class="input-group-text">min</span>
+            <input type="number" name="sekunde" class="form-control" min="0" max="59" value="0">
+            <span class="input-group-text">s</span>
         </div>
     </div>
 

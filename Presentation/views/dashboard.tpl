@@ -12,14 +12,7 @@
             <p>Število tekov: {{len(teki)}}</p>
             <p>Skupna razdalja: {{round(skupna_razdalja, 2)}} km</p>
 
-            <p>
-                Skupni čas:
-                % if skupno_trajanje >= 60:
-                    {{skupno_trajanje // 60}} h {{skupno_trajanje % 60}} min
-                % else:
-                    {{skupno_trajanje}} min
-                % end
-            </p>
+            <p>Skupni čas: {{format_trajanje(skupno_trajanje)}}</p>
 
             <a class="btn btn-primary" href="/runs">Poglej teke</a>
             <a class="btn btn-success" href="/runs/new">Dodaj tek</a>

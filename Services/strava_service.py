@@ -1,7 +1,7 @@
 from Data.repository import Repo
 from Data.models import Tek
 from typing import List
-
+from psycopg2.errors import UniqueViolation
 import os
 import requests
 from datetime import datetime
@@ -61,35 +61,41 @@ class StravaService:
 
     def dobi_teke_iz_strave(self, uporabnik_id: int, access_token: str) -> List[Tek]:
         headers = {"Authorization": f"Bearer {access_token}"}
-
-        response = requests.get(
-            f"{STRAVA_API_URL}/athlete/activities",
-            headers=headers,
-            params={"per_page": 30},
-        )
-        response.raise_for_status()
-
-        aktivnosti = response.json()
+        page = 1
         shranjeni_teki = []
+        MAX_PAGES = 50
 
-        for aktivnost in aktivnosti:
-            if aktivnost.get("type") == "Run":
-                razdalja_km = (
-                    aktivnost.get("distance", 0) / 1000
-                )  # Strava vrne razdalje v metrih
-                trajanje_sekunde = aktivnost.get(
-                    "moving_time", 0
-                )
-                trajanje_minute = round(trajanje_sekunde / 60) # Strava vrne trajanje v sekundah
+        while page <= MAX_PAGES:
+            response = requests.get(
+                f"{STRAVA_API_URL}/athlete/activities",
+                headers=headers,
+                params={"per_page": 20, "page": page},
+            )
+            response.raise_for_status()
 
-                datum_str = aktivnost.get("start_date_local", "")
-                datum = datetime.fromisoformat(
-                    datum_str.replace("Z", "+00:00")
-                )  # Datumi iz Strave pridejo z 'Z' na koncu
+            aktivnosti = response.json()
+            if not aktivnosti:
+                break
 
-                tek = self.repo.dodaj_tek(
-                    uporabnik_id, datum, razdalja_km, trajanje_minute
-                )
-                shranjeni_teki.append(tek)
+            for aktivnost in aktivnosti:
+                if aktivnost.get("type") == "Run":
+                    razdalja_km = round(
+                        aktivnost.get("distance", 0) / 1000, 2
+                    )  # Strava vrne razdalje v metrih
+                    trajanje_sekunde = aktivnost.get(
+                        "moving_time", 0
+                    )  # Strava vrne trajanje v sekundah
+
+                    datum_str = aktivnost.get("start_date_local", "")
+                    datum = datetime.fromisoformat(
+                        datum_str.replace("Z", "+00:00")
+                    )  # Datumi iz Strave pridejo z 'Z' na koncu
+
+                    tek = self.repo.dodaj_tek(
+                        uporabnik_id, datum, razdalja_km, trajanje_sekunde
+                    )
+                    shranjeni_teki.append(tek)
+
+            page += 1
 
         return shranjeni_teki
