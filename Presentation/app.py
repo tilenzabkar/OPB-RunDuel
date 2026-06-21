@@ -351,7 +351,8 @@ def create_challenge_post():
             uporabnik_nasprotuje_id=nasprotnik_id,
         )
 
-        redirect("/challenges?success=Izziv je bil ustvarjen.")
+        msg = "Izziv je bil ustvarjen."
+        url = f"/challenges?success={quote(msg)}"
     except Exception as e:
         uporabniki = [
             u for u in user_service.dobi_vse_uporabnike() if u.id != user["id"]
@@ -363,6 +364,8 @@ def create_challenge_post():
             tipi=tipi,
             error=str(e),
         )
+
+    redirect(url)
 
 
 # funkcija za testiranje
@@ -397,7 +400,8 @@ def finish_challenge(izziv_id):
 
         izziv_service.zakljuci_izziv(izziv_id)
         refresh_current_user()
-        redirect("/challenges?success=Izziv je bil zaključen.")
+        msg = "Izziv je bil zaključen."
+        url = f"/challenges?success={quote(msg)}"
     except Exception as e:
         user = current_user()
         izzivi = izziv_service.dobi_izzive(user["id"])
@@ -406,6 +410,8 @@ def finish_challenge(izziv_id):
             izzivi=izzivi,
             error=str(e),
         )
+
+    redirect(url)
 
 
 def _format_trajanje(sekunde: int) -> str:

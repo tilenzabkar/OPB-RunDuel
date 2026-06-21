@@ -35,13 +35,15 @@
                 <td>
                     % if izziv.zmagovalec_ime:
                         {{izziv.zmagovalec_ime}}
+                    % elif izziv.je_zakljucen:
+                        Remi
                     % else:
                         /
                     % end
                 </td>
 
                 <td>
-                    % if not izziv.zmagovalec_ime:
+                    % if not izziv.je_zakljucen:
                         <form method="post" action="/challenges/{{izziv.id}}/finish">
                             <button class="btn btn-sm btn-warning">Zaključi</button>
                         </form>

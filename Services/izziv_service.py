@@ -101,7 +101,7 @@ class IzzivService:
 
         izziv = self.repo.dobi_izziv(izziv_id)
 
-        if izziv.zmagovalec is not None:  # zmagovalec je že določen
+        if izziv.je_zakljucen:  # zmagovalec je že določen
             return
 
         if datetime.datetime.now() < izziv.datum_zacetka + datetime.timedelta(days=7):
@@ -125,10 +125,11 @@ class IzzivService:
 
         if zmagovalec_id is not None and porazenec_id is not None:
             self.repo.nastavi_zmagovalca(izziv_id, zmagovalec_id)
-
             self.repo.izvedi_izplacilo_izziva(izziv_id, zmagovalec_id, izziv.stava)
+            self.repo.zakljuci_izziv(izziv_id)
 
         else:  # Remi, vrnemo stave
             self.repo.vrni_stave_izziva(
                 izziv_id, izziv.uporabnik_stavi, izziv.uporabnik_nasprotuje, izziv.stava
             )
+            self.repo.zakljuci_izziv(izziv_id)

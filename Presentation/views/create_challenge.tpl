@@ -24,8 +24,20 @@
     </div>
 
     <div class="mb-3">
+        <label class="form-label">Tvoje stanje</label>
+        <div class="alert alert-info d-flex align-items-center" role="alert">
+            <i class="bi bi-coin me-2"></i>
+            {{ user['stanje'] }} kovancev na voljo.
+        </div>
+    </div>
+
+    <div class="mb-3">
         <label class="form-label">Stava</label>
-        <input class="form-control" type="number" name="stava" required>
+        <input class="form-control" type="number" name="stava" 
+               min="1" max="{{ user['stanje'] }}" required>
+        <small class="form-text text-muted">
+            Vpišite znesek med 1 in {{ user['stanje'] }} kovancev.
+        </small>
     </div>
 
     <button class="btn btn-success">Ustvari</button>
