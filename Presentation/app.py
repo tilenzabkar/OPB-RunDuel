@@ -14,7 +14,7 @@ load_dotenv(ROOT_DIR / ".env")
 from bottle import Bottle, request, redirect, run, static_file, template
 from beaker.middleware import SessionMiddleware
 
-from Data.models import TipIzziva
+from Data.models import TipIzziva, IzzivDto
 from Services.auth_service import AuthService
 from Services.user_service import UserService
 from Services.tek_service import TekService
@@ -76,6 +76,7 @@ def render(view, **kwargs):
     kwargs.setdefault("error", request.query.getunicode("error") or None)
     kwargs.setdefault("success", request.query.getunicode("success") or None)
     kwargs.setdefault("format_trajanje", _format_trajanje)
+    kwargs.setdefault("nasprotnik_ime", _nasprotnik_ime)
     return template(view, template_lookup=["Presentation/views"], **kwargs)
 
 
@@ -391,6 +392,20 @@ def naredi_izziv_star_za_test(izziv_id):
     conn.close()
 
 
+@app.post("/challenges/<izziv_id:int>/accept")
+def accept_challenge(izziv_id):
+    require_login()
+    user_id = current_user()["id"]
+    try:
+        izziv_service.sprejmi_izziv(izziv_id, user_id)
+        msg = "Izziv je bil sprejet."
+        url = f"/challenges?success={quote(msg)}"
+    except Exception as e:
+        url = f"/challenges?error={quote(str(e))}"
+
+    redirect(url)
+
+
 @app.post("/challenges/<izziv_id:int>/finish")
 def finish_challenge(izziv_id):
     require_login()
@@ -419,6 +434,13 @@ def _format_trajanje(sekunde: int) -> str:
     m = (sekunde % 3600) // 60
     s = sekunde % 60
     return f"{f'{h}h ' if h>0 else ''}{m}min {s}s"
+
+
+def _nasprotnik_ime(izziv: IzzivDto, uporabnik_id: int):
+    if izziv.uporabnik_stavi == uporabnik_id:
+        return izziv.uporabnik_nasprotuje_ime
+    else:
+        return izziv.uporabnik_stavi_ime
 
 
 session_opts = {

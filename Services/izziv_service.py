@@ -82,8 +82,8 @@ class IzzivService:
             vrsta, stava, datum_zacetka, uporabnik_stavi_id, uporabnik_nasprotuje_id
         )
 
-        self.repo.rezerviraj_sredstva_za_izziv(
-            ustvarjen_izziv.id, uporabnik_stavi_id, uporabnik_nasprotuje_id, stava
+        self.repo.odvzemi_kovance_za_izziv(
+            ustvarjen_izziv.id, uporabnik_stavi_id, stava
         )
 
         return ustvarjen_izziv
@@ -94,6 +94,30 @@ class IzzivService:
         """
         return self.repo.dobi_izzive_uporabnika(uporabnik_id)
 
+    def sprejmi_izziv(self, izziv_id: int, user_id: int) -> None:
+        """
+        Preveri, ali je res uporabnik na strani nasprotuje in v tem primeru sprejme izziv.
+        """
+        izziv = self.repo.dobi_izziv(izziv_id)
+        uporabnik_nasprotuje = self.repo.dobi_uporabnika_po_id(
+            izziv.uporabnik_nasprotuje
+        )
+        if uporabnik_nasprotuje.id != user_id:
+            raise PermissionError("Samo nasprotnik lahko sprejme izziv.")
+        if izziv.je_sprejet:
+            raise ValueError("Izziv je bil že sprejet.")
+        if izziv.je_zakljucen:
+            raise ValueError("Izziv je že zaključen.")
+        if uporabnik_nasprotuje.stanje < izziv.stava:
+            raise ValueError(
+                f"Uporabnik {uporabnik_nasprotuje.uporabnisko_ime} nima dovolj kovancev za stavo!"
+            )
+
+        self.repo.odvzemi_kovance_za_izziv(
+            izziv_id, izziv.uporabnik_nasprotuje, izziv.stava
+        )
+        return self.repo.sprejmi_izziv(izziv_id)
+
     def zakljuci_izziv(self, izziv_id: int) -> None:
         """
         Za dan izziv določi zmagovalca in opravi izplačilo stave. V primeru remija vrne prvotne stave.
@@ -101,11 +125,14 @@ class IzzivService:
 
         izziv = self.repo.dobi_izziv(izziv_id)
 
+        if not izziv.je_sprejet:
+            raise ValueError("Izziv še ni bil sprejet.")
+
         if izziv.je_zakljucen:  # zmagovalec je že določen
             return
 
-        if datetime.datetime.now() < izziv.datum_zacetka + datetime.timedelta(days=7):
-            raise ValueError("Izziv še ni zaključen, ker še ni poteklo 7 dni!")
+        # if datetime.datetime.now() < izziv.datum_zacetka + datetime.timedelta(days=7):
+        #     raise ValueError("Izziv še ni zaključen, ker še ni poteklo 7 dni!")
 
         teki_stavi = self.repo.dobi_teke_uporabnika_za_izziv(
             izziv.uporabnik_stavi, izziv.datum_zacetka, izziv.vrsta

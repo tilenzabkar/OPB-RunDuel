@@ -7,7 +7,7 @@
 <table class="table table-bordered table-striped">
     <thead>
         <tr>
-            <th>Tekmovalca</th>
+            <th>Nasprotnik</th>
             <th>Vrsta</th>
             <th>Stava</th>
             <th>Začetek</th>
@@ -20,9 +20,7 @@
         % for izziv in izzivi:
             <tr>
                 <td>
-                    {{izziv.uporabnik_stavi_ime}}
-                    proti
-                    {{izziv.uporabnik_nasprotuje_ime}}
+                    {{ nasprotnik_ime(izziv, user["id"]) }}
                 </td>
 
                 <td>{{izziv.vrsta}}</td>
@@ -33,22 +31,34 @@
                 </td>
 
                 <td>
-                    % if izziv.zmagovalec_ime:
-                        {{izziv.zmagovalec_ime}}
-                    % elif izziv.je_zakljucen:
-                        Remi
+                    % if izziv.je_zakljucen:
+                        % if izziv.zmagovalec_ime:
+                            {{ izziv.zmagovalec_ime }}
+                        % else:
+                            Remi
+                        % end
                     % else:
                         /
                     % end
                 </td>
 
                 <td>
-                    % if not izziv.je_zakljucen:
+                    % if izziv.je_zakljucen:
+                        <span class="text-muted">Zaključeno</span>
+                    % elif izziv.je_sprejet:
                         <form method="post" action="/challenges/{{izziv.id}}/finish">
-                            <button class="btn btn-sm btn-warning">Zaključi</button>
+                                <button class="btn btn-sm btn-warning">Zaključi</button>
                         </form>
                     % else:
-                        Zaključeno
+                        % if user["id"] == izziv.uporabnik_nasprotuje:
+                            <form method="post" action="/challenges/{{izziv.id}}/accept">
+                                <button class="btn btn-sm btn-primary">Sprejmi</button>
+                            </form>
+                        % elif user["id"] == izziv.uporabnik_stavi:
+                            <span class="text-secondary">Čaka na sprejem</span>
+                        % else:
+                            <span class="text-muted">-</span>
+                        % end
                     % end
                 </td>
             </tr>

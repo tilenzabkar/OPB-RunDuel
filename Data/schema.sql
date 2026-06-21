@@ -21,7 +21,8 @@ CREATE TABLE IF NOT EXISTS izziv (
     uporabnik_stavi INTEGER NOT NULL REFERENCES uporabnik(id),
     uporabnik_nasprotuje INTEGER NOT NULL REFERENCES uporabnik(id),
     zmagovalec INTEGER REFERENCES uporabnik(id),
-    je_zakljucen BOOLEAN NOT NULL DEFAULT FALSE
+    je_zakljucen BOOLEAN NOT NULL DEFAULT FALSE,
+    je_sprejet BOOLEAN NOT NULL DEFAULT FALSE
 );
 
 CREATE TABLE IF NOT EXISTS transakcija (

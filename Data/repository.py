@@ -256,7 +256,7 @@ class Repo:
                     """
                     INSERT INTO izziv (vrsta, stava, datum_zacetka, uporabnik_stavi, uporabnik_nasprotuje)
                     VALUES (%s, %s, %s, %s, %s)
-                    RETURNING id, vrsta, stava, datum_zacetka, uporabnik_stavi, uporabnik_nasprotuje, zmagovalec, je_zakljucen
+                    RETURNING id, vrsta, stava, datum_zacetka, uporabnik_stavi, uporabnik_nasprotuje, zmagovalec, je_zakljucen, je_sprejet
                     """,
                     (
                         vrsta.value,
@@ -274,7 +274,16 @@ class Repo:
             with self.conn.cursor(cursor_factory=psycopg2.extras.DictCursor) as cur:
                 cur.execute(
                     """
-                    SELECT id, vrsta, stava, datum_zacetka, uporabnik_stavi, uporabnik_nasprotuje, zmagovalec, je_zakljucen
+                    SELECT 
+                        id, 
+                        vrsta, 
+                        stava, 
+                        datum_zacetka, 
+                        uporabnik_stavi, 
+                        uporabnik_nasprotuje, 
+                        zmagovalec, 
+                        je_zakljucen, 
+                        je_sprejet
                     FROM izziv
                     WHERE id = %s
                     """,
@@ -302,7 +311,8 @@ class Repo:
                         nasprotuje.uporabnisko_ime AS uporabnik_nasprotuje_ime,
                         i.zmagovalec AS zmagovalec,
                         COALESCE(zmaga.uporabnisko_ime, '') AS zmagovalec_ime,
-                        i.je_zakljucen AS je_zakljucen
+                        i.je_zakljucen AS je_zakljucen,
+                        i.je_sprejet AS je_sprejet
                     FROM izziv AS i
                     JOIN uporabnik AS stavi ON stavi.id = i.uporabnik_stavi
                     JOIN uporabnik AS nasprotuje ON nasprotuje.id = i.uporabnik_nasprotuje
@@ -313,6 +323,18 @@ class Repo:
                     (uporabnik_id, uporabnik_id),
                 )
                 return [IzzivDto.from_dict(row) for row in cur.fetchall()]
+
+    def sprejmi_izziv(self, izziv_id: int) -> None:
+        with self.conn:
+            with self.conn.cursor() as cur:
+                cur.execute(
+                    """
+                    UPDATE izziv
+                    SET je_sprejet = TRUE
+                    WHERE id = %s
+                    """,
+                    (izziv_id,),
+                )
 
     def nastavi_zmagovalca(self, izziv_id: int, zmagovalec_id: int) -> None:
         with self.conn:
@@ -340,11 +362,10 @@ class Repo:
 
     # --- TRANSAKCIJE ---
 
-    def rezerviraj_sredstva_za_izziv(
+    def odvzemi_kovance_za_izziv(
         self,
         izziv_id: int,
-        uporabnik_stavi_id: int,
-        uporabnik_nasprotuje_id: int,
+        uporabnik_id: int,
         stava: int,
     ) -> None:
         with self.conn:
@@ -352,26 +373,22 @@ class Repo:
                 cas_transakcije = datetime.datetime.now()
                 cur.execute(
                     """
-                   UPDATE uporabnik
-                   SET stanje = stanje - %s
-                   WHERE id in (%s, %s)
-                   """,
-                    (stava, uporabnik_stavi_id, uporabnik_nasprotuje_id),
+                    UPDATE uporabnik
+                    SET stanje = stanje - %s
+                    WHERE id = %s
+                    """,
+                    (stava, uporabnik_id),
                 )
 
                 cur.execute(
                     """
                     INSERT INTO transakcija (sprememba, cas, uporabnik, izziv)
-                    VALUES (%s, %s, %s, %s), (%s, %s, %s, %s)
+                    VALUES (%s, %s, %s, %s)
                     """,
                     (
                         -stava,
                         cas_transakcije,
-                        uporabnik_stavi_id,
-                        izziv_id,
-                        -stava,
-                        cas_transakcije,
-                        uporabnik_nasprotuje_id,
+                        uporabnik_id,
                         izziv_id,
                     ),
                 )

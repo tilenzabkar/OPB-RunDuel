@@ -54,6 +54,7 @@ class Izziv:
     uporabnik_nasprotuje: int = field(default=0)
     zmagovalec: Optional[int] = field(default=None)
     je_zakljucen: bool = field(default=False)
+    je_sprejet: bool = field(default=False)
 
 
 @dataclass_json
@@ -70,6 +71,7 @@ class IzzivDto:
     zmagovalec: Optional[int] = field(default=None)
     zmagovalec_ime: Optional[str] = field(default=None)
     je_zakljucen: bool = field(default="false")
+    je_sprejet: bool = field(default=False)
 
 
 @dataclass_json
