@@ -17,6 +17,7 @@
             <a class="btn btn-primary" href="/runs">Poglej teke</a>
             <a class="btn btn-success" href="/runs/new">Dodaj tek</a>
             <a class="btn btn-warning" href="/strava/connect">Uvozi iz Strave</a>
+            <a class="btn btn-danger" href="/strava/logout" target="_blank" rel="noopener noreferrer">Odjava iz Strave</a>
         </div>
     </div>
 

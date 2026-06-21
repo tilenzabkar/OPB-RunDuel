@@ -4,6 +4,7 @@
 
 <a class="btn btn-success mb-3" href="/runs/new">Dodaj tek</a>
 <a class="btn btn-warning mb-3" href="/strava/connect">Uvozi iz Strave</a>
+<a class="btn btn-danger mb-3" href="/strava/logout" target="_blank" rel="noopener noreferrer">Odjava iz Strave</a>
 
 <table class="table table-bordered table-striped">
     <thead>

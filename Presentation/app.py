@@ -2,6 +2,7 @@ import datetime
 import sys
 from pathlib import Path
 from urllib.parse import quote
+import secrets
 
 ROOT_DIR = Path(__file__).resolve().parent.parent
 sys.path.append(str(ROOT_DIR))
@@ -177,8 +178,15 @@ def runs():
 @app.get("/strava/connect")
 def strava_connect():
     require_login()
+
+    state = secrets.token_urlsafe(32)
+    session = get_session()
+    session["strava_state"] = state
+    session["strava_user_id"] = current_user()["id"]
+    session.save()
+
     redirect_uri = "http://localhost:8080/strava/callback"
-    prijavni_url = strava_service.generiraj_prijavni_url(redirect_uri)
+    prijavni_url = strava_service.generiraj_prijavni_url(redirect_uri, state)
     redirect(prijavni_url)
 
 
@@ -191,6 +199,15 @@ def strava_callback():
         redirect(f"/runs?error=Strava povezava ni bila odobrena: {error}")
     if not code:
         redirect("/runs?error=Strava ni vrnila avtorizacijske kode.")
+
+    state = request.query.get("state")
+    session = get_session()
+    if state != session.get("strava_state"):
+        redirect("/runs?error=Invalid OAuth state")
+
+    if current_user()["id"] != session.get("strava_user_id"):
+        redirect("/runs?error=OAuth user mismatch")
+
     try:
         access_token = strava_service.pridobi_dostopni_zeton(code)
         shranjeni_teki = strava_service.dobi_teke_iz_strave(
@@ -204,6 +221,11 @@ def strava_callback():
         url = f"/runs?error=Napaka pri uvozu iz Strave: {str(e)}"
 
     redirect(url)
+
+
+@app.get("/strava/logout")
+def strava_logout():
+    redirect("https://www.strava.com/logout")
 
 
 @app.get("/runs/new")

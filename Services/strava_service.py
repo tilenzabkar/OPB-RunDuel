@@ -18,7 +18,7 @@ class StravaService:
     def __init__(self):
         self.repo = Repo()
 
-    def generiraj_prijavni_url(self, redirect_uri: str) -> str:
+    def generiraj_prijavni_url(self, redirect_uri: str, state: str) -> str:
         """
         Vrne URL, na katerega mora API preusmeriti uporabnika,
         da se prijavi v Stravo in naši aplikaciji odobri dostop do svojih tekov.
@@ -26,14 +26,14 @@ class StravaService:
         if STRAVA_CLIENT_ID is None:
             raise ValueError("Napaka pri konfiguraciji Strava API ključev!")
 
-        # Parametra scope=activity:read je obvezen, da lahko beremo aktivnosti (teke)
         url = (
             f"https://www.strava.com/oauth/authorize"
             f"?client_id={STRAVA_CLIENT_ID}"
             f"&response_type=code"
             f"&redirect_uri={redirect_uri}"
             f"&approval_prompt=force"
-            f"&scope=activity:read"
+            f"&scope=activity:read"  # samo beremo
+            f"&state={state}"  # oauth varnost
         )
         return url
 
