@@ -256,7 +256,7 @@ class Repo:
                     """
                     INSERT INTO izziv (vrsta, stava, datum_zacetka, uporabnik_stavi, uporabnik_nasprotuje)
                     VALUES (%s, %s, %s, %s, %s)
-                    RETURNING id, vrsta, stava, datum_zacetka, uporabnik_stavi, uporabnik_nasprotuje, zmagovalec
+                    RETURNING id, vrsta, stava, datum_zacetka, uporabnik_stavi, uporabnik_nasprotuje, zmagovalec, je_zakljucen
                     """,
                     (
                         vrsta.value,
@@ -274,7 +274,7 @@ class Repo:
             with self.conn.cursor(cursor_factory=psycopg2.extras.DictCursor) as cur:
                 cur.execute(
                     """
-                    SELECT id, vrsta, stava, datum_zacetka, uporabnik_stavi,        uporabnik_nasprotuje, zmagovalec
+                    SELECT id, vrsta, stava, datum_zacetka, uporabnik_stavi, uporabnik_nasprotuje, zmagovalec, je_zakljucen
                     FROM izziv
                     WHERE id = %s
                     """,
@@ -301,7 +301,8 @@ class Repo:
                         i.uporabnik_nasprotuje AS uporabnik_nasprotuje, 
                         nasprotuje.uporabnisko_ime AS uporabnik_nasprotuje_ime,
                         i.zmagovalec AS zmagovalec,
-                        COALESCE(zmaga.uporabnisko_ime, '') AS zmagovalec_ime
+                        COALESCE(zmaga.uporabnisko_ime, '') AS zmagovalec_ime,
+                        i.je_zakljucen AS je_zakljucen
                     FROM izziv AS i
                     JOIN uporabnik AS stavi ON stavi.id = i.uporabnik_stavi
                     JOIN uporabnik AS nasprotuje ON nasprotuje.id = i.uporabnik_nasprotuje
@@ -323,6 +324,18 @@ class Repo:
                     WHERE id = %s
                     """,
                     (zmagovalec_id, izziv_id),
+                )
+
+    def zakljuci_izziv(self, izziv_id: int) -> None:
+        with self.conn:
+            with self.conn.cursor() as cur:
+                cur.execute(
+                    """
+                    UPDATE izziv
+                    SET je_zakljucen = TRUE
+                    WHERE id = %s
+                    """,
+                    (izziv_id,),
                 )
 
     # --- TRANSAKCIJE ---

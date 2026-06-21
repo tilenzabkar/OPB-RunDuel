@@ -2,6 +2,7 @@ from dataclasses import dataclass, field
 from dataclasses_json import dataclass_json
 from datetime import datetime
 from enum import Enum
+from typing import Optional
 
 
 class TipIzziva(str, Enum):
@@ -51,7 +52,8 @@ class Izziv:
     datum_zacetka: datetime = field(default=datetime.now())
     uporabnik_stavi: int = field(default=0)
     uporabnik_nasprotuje: int = field(default=0)
-    zmagovalec: int = field(default=0)
+    zmagovalec: Optional[int] = field(default=None)
+    je_zakljucen: bool = field(default=False)
 
 
 @dataclass_json
@@ -65,8 +67,9 @@ class IzzivDto:
     uporabnik_stavi_ime: str = field(default="")
     uporabnik_nasprotuje: int = field(default=0)
     uporabnik_nasprotuje_ime: str = field(default="")
-    zmagovalec: int = field(default=0)
-    zmagovalec_ime: str = field(default="")
+    zmagovalec: Optional[int] = field(default=None)
+    zmagovalec_ime: Optional[str] = field(default=None)
+    je_zakljucen: bool = field(default="false")
 
 
 @dataclass_json
