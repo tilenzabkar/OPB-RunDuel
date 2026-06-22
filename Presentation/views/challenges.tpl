@@ -12,6 +12,7 @@
             <th>Stava</th>
             <th>Začetek</th>
             <th>Zmagovalec</th>
+            <th>Podrobnosti</th>
             <th>Akcija</th>
         </tr>
     </thead>
@@ -20,7 +21,7 @@
         % for izziv in izzivi:
             <tr>
                 <td>
-                    {{ nasprotnik_ime(izziv, user["id"]) }}
+                    {{ nasprotnik(izziv, user["id"]).uporabnisko_ime }}
                 </td>
 
                 <td>{{izziv.vrsta}}</td>
@@ -42,6 +43,9 @@
                     % end
                 </td>
 
+                <td>
+                    <a href="/challenges/{{izziv.id}}" class="btn btn-sm btn-info">Podrobnosti</a>
+                </td>
                 <td>
                     % if izziv.je_zakljucen:
                         <span class="text-muted">Zaključeno</span>

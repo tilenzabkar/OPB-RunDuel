@@ -23,7 +23,7 @@
                 <a class="nav-link" href="/dashboard">Dashboard</a>
                 <a class="nav-link" href="/runs">Teki</a>
                 <a class="nav-link" href="/challenges">Izzivi</a>
-                <a class="nav-link" href="/users">Uporabniki</a>
+                <a class="nav-link" href="/users">Lestvica</a>
                 <a class="nav-link" href="/logout">Odjava</a>
             % else:
                 <a class="nav-link" href="/login">Prijava</a>

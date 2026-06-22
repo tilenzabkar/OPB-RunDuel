@@ -14,7 +14,7 @@ load_dotenv(ROOT_DIR / ".env")
 from bottle import Bottle, request, redirect, run, static_file, template
 from beaker.middleware import SessionMiddleware
 
-from Data.models import TipIzziva, IzzivDto
+from Data.models import TipIzziva, IzzivDto, Izziv
 from Services.auth_service import AuthService
 from Services.user_service import UserService
 from Services.tek_service import TekService
@@ -76,7 +76,8 @@ def render(view, **kwargs):
     kwargs.setdefault("error", request.query.getunicode("error") or None)
     kwargs.setdefault("success", request.query.getunicode("success") or None)
     kwargs.setdefault("format_trajanje", _format_trajanje)
-    kwargs.setdefault("nasprotnik_ime", _nasprotnik_ime)
+    kwargs.setdefault("nasprotnik", _vrni_nasprotnika)
+    kwargs.setdefault("lep_izpis_vrste", _lep_izpis_vrste)
     return template(view, template_lookup=["Presentation/views"], **kwargs)
 
 
@@ -164,7 +165,9 @@ def dashboard():
 @app.get("/users")
 def users():
     require_login()
-    uporabniki = user_service.dobi_vse_uporabnike()
+    uporabniki = sorted(
+        user_service.dobi_vse_uporabnike(), key=lambda u: u.stanje, reverse=True
+    )
     return render("users.tpl", uporabniki=uporabniki)
 
 
@@ -369,6 +372,45 @@ def create_challenge_post():
     redirect(url)
 
 
+@app.get("/challenges/<izziv_id:int>")
+def challenge_detail(izziv_id):
+    require_login()
+    user_id = current_user()["id"]
+    try:
+        izziv = izziv_service.dobi_izziv(izziv_id, user_id)
+        nasprotnik = _vrni_nasprotnika(izziv, user_id)
+
+        uporabnikovi_teki = izziv_service.dobi_teke_uporabnika_za_izziv(
+            user_id, izziv.datum_zacetka, izziv.vrsta
+        )
+        nasprotnikovi_teki = izziv_service.dobi_teke_uporabnika_za_izziv(
+            nasprotnik.id, izziv.datum_zacetka, izziv.vrsta
+        )
+
+        uporabnik_najboljsi_tek = izziv_service.dobi_najboljsi_tek(
+            uporabnikovi_teki, izziv.vrsta
+        )
+        nasprotnik_najboljsi_tek = izziv_service.dobi_najboljsi_tek(
+            nasprotnikovi_teki, izziv.vrsta
+        )
+        konec = izziv.datum_zacetka + datetime.timedelta(days=7)
+
+        return render(
+            "challenge_details.tpl",
+            izziv=izziv,
+            nasprotnik=nasprotnik,
+            tedenska_razdalja=TipIzziva.TEDENSKA_RAZDALJA,
+            uporabnikovi_teki=uporabnikovi_teki,
+            uporabnik_najboljsi_tek=uporabnik_najboljsi_tek,
+            nasprotnikovi_teki=nasprotnikovi_teki,
+            nasprotnik_najboljsi_tek=nasprotnik_najboljsi_tek,
+            konec=konec,
+            dobi_uporabnika_po_id=user_service.dobi_uporabnika_po_id,
+        )
+    except Exception as e:
+        redirect(f"/challenges?error={quote(str(e))}")
+
+
 # funkcija za testiranje
 def naredi_izziv_star_za_test(izziv_id):
     conn = psycopg2.connect(
@@ -436,11 +478,22 @@ def _format_trajanje(sekunde: int) -> str:
     return f"{f'{h}h ' if h>0 else ''}{m}min {s}s"
 
 
-def _nasprotnik_ime(izziv: IzzivDto, uporabnik_id: int):
+def _vrni_nasprotnika(izziv: IzzivDto | Izziv, uporabnik_id: int):
     if izziv.uporabnik_stavi == uporabnik_id:
-        return izziv.uporabnik_nasprotuje_ime
+        return user_service.dobi_uporabnika_po_id(izziv.uporabnik_nasprotuje)
     else:
-        return izziv.uporabnik_stavi_ime
+        return user_service.dobi_uporabnika_po_id(izziv.uporabnik_stavi)
+
+
+def _lep_izpis_vrste(vrsta: TipIzziva) -> str:
+    mapiranje = {
+        TipIzziva.PET_KM: "Najhitrejši tek na 5 km",
+        TipIzziva.DESET_KM: "Najhitrejši tek na 10 km",
+        TipIzziva.POL_MARATON: "Najhitrejši tek na pol maraton (21 km)",
+        TipIzziva.MARATON: "Najhitrejši tek na maraton (42 km)",
+        TipIzziva.TEDENSKA_RAZDALJA: "Skupna pretečena razdalja v enem tednu",
+    }
+    return mapiranje.get(vrsta, vrsta.value)
 
 
 session_opts = {

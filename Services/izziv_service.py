@@ -94,6 +94,30 @@ class IzzivService:
         """
         return self.repo.dobi_izzive_uporabnika(uporabnik_id)
 
+    def dobi_izziv(self, izziv_id: int, uporabnik_id: int) -> Izziv:
+        """
+        Preveri, če je uporabnik udeležen v izzivu in v tem primeru vrne IzzivDto objekt za dan izziv id.
+        """
+        izziv = self.repo.dobi_izziv(izziv_id)
+        if uporabnik_id in (izziv.uporabnik_stavi, izziv.uporabnik_nasprotuje):
+            return izziv
+        else:
+            raise PermissionError("Uporabnik ni del izziva!")
+
+    def dobi_najboljsi_tek(
+        self, teki: List[Tek], vrsta_izziva: TipIzziva
+    ) -> Tek | None:
+        """
+        Vrne najboljši tek iz danega seznama teki za dano vrsto izziva. V primeru tipa izziva TEDENSKA_RAZDALJA, vrne None.
+        """
+        if teki == []:
+            return None
+
+        if vrsta_izziva != TipIzziva.TEDENSKA_RAZDALJA:
+            return min(teki, key=lambda tek: round(tek.trajanje / 60, 2) / tek.razdalja)
+        else:
+            return None
+
     def sprejmi_izziv(self, izziv_id: int, user_id: int) -> None:
         """
         Preveri, ali je res uporabnik na strani nasprotuje in v tem primeru sprejme izziv.
@@ -117,6 +141,16 @@ class IzzivService:
             izziv_id, izziv.uporabnik_nasprotuje, izziv.stava
         )
         return self.repo.sprejmi_izziv(izziv_id)
+
+    def dobi_teke_uporabnika_za_izziv(
+        self, uporabnik_id: int, datum_zacetka: datetime, vrsta: TipIzziva
+    ):
+        """
+        Vrne teke uporabnika z uporabnik_id, ki so veljavni za dan izziv z vrsto "vrsta" in datumom začetka "datum_zacetka".
+        """
+        return self.repo.dobi_teke_uporabnika_za_izziv(
+            uporabnik_id, datum_zacetka, vrsta
+        )
 
     def zakljuci_izziv(self, izziv_id: int) -> None:
         """

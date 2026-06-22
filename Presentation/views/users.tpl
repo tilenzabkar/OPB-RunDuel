@@ -1,6 +1,6 @@
 % rebase("base.tpl", user=user, success=success, error=error)
 
-<h2>Uporabniki</h2>
+<h2>Lestvica uporabnikov</h2>
 
 <table class="table table-bordered table-striped">
     <thead>

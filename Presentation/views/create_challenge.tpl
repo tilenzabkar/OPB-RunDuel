@@ -7,7 +7,7 @@
         <label class="form-label">Vrsta izziva</label>
         <select class="form-select" name="vrsta" required>
             % for tip in tipi:
-                <option value="{{tip.value}}">{{tip.value}}</option>
+                <option value="{{tip.value}}">{{lep_izpis_vrste(tip)}}</option>
             % end
         </select>
     </div>
