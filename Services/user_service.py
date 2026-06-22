@@ -25,3 +25,9 @@ class UserService:
         Vrne uporabnika iz danega IDja.
         """
         return self.repo.dobi_uporabnika_po_id(uporabnik_id)
+
+    def povecaj_stanje_uporabniku(self, uporabnik_id: int, sprememba: int) -> None:
+        """
+        Spremeni danemu uporabniku stanje za vrednost "sprememba" in shrani transakcijo.
+        """
+        self.repo.povecaj_stanje_uporabniku(uporabnik_id, sprememba)

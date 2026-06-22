@@ -81,4 +81,4 @@ class Transakcija:
     sprememba: int = field(default=0)
     cas: datetime = field(default=datetime.now())
     uporabnik: int = field(default=0)
-    izziv: int = field(default=0)
+    izziv: Optional[int] = field(default=None)

@@ -82,8 +82,8 @@ class IzzivService:
             vrsta, stava, datum_zacetka, uporabnik_stavi_id, uporabnik_nasprotuje_id
         )
 
-        self.repo.odvzemi_kovance_za_izziv(
-            ustvarjen_izziv.id, uporabnik_stavi_id, stava
+        self.repo.povecaj_stanje_uporabniku(
+            uporabnik_stavi_id, -stava, ustvarjen_izziv.id
         )
 
         return ustvarjen_izziv
@@ -137,8 +137,8 @@ class IzzivService:
                 f"Uporabnik {uporabnik_nasprotuje.uporabnisko_ime} nima dovolj kovancev za stavo!"
             )
 
-        self.repo.odvzemi_kovance_za_izziv(
-            izziv_id, izziv.uporabnik_nasprotuje, izziv.stava
+        self.repo.povecaj_stanje_uporabniku(
+            izziv.uporabnik_nasprotuje, -izziv.stava, izziv.id
         )
         return self.repo.sprejmi_izziv(izziv_id)
 
@@ -186,11 +186,16 @@ class IzzivService:
 
         if zmagovalec_id is not None and porazenec_id is not None:
             self.repo.nastavi_zmagovalca(izziv_id, zmagovalec_id)
-            self.repo.izvedi_izplacilo_izziva(izziv_id, zmagovalec_id, izziv.stava)
+            self.repo.povecaj_stanje_uporabniku(
+                zmagovalec_id, 2 * izziv.stava, izziv_id
+            )  # zmaga svojo in nasprotnikovo stavo
             self.repo.zakljuci_izziv(izziv_id)
 
         else:  # Remi, vrnemo stave
-            self.repo.vrni_stave_izziva(
-                izziv_id, izziv.uporabnik_stavi, izziv.uporabnik_nasprotuje, izziv.stava
+            self.repo.povecaj_stanje_uporabniku(
+                izziv.uporabnik_stavi, izziv.stava, izziv_id
+            )
+            self.repo.povecaj_stanje_uporabniku(
+                izziv.uporabnik_nasprotuje, izziv.stava, izziv_id
             )
             self.repo.zakljuci_izziv(izziv_id)

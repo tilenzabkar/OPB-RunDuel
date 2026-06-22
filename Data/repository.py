@@ -14,9 +14,10 @@ from Data.models import (
     IzzivDto,
     UporabnikDto,
     Uporabnik,
+    Transakcija,
     ZACETNO_STANJE,
 )
-from typing import List
+from typing import List, Optional
 from dotenv import load_dotenv
 
 load_dotenv()
@@ -116,6 +117,30 @@ class Repo:
                     """)
 
                 return [UporabnikDto.from_dict(row) for row in cur.fetchall()]
+
+    def povecaj_stanje_uporabniku(
+        self, uporabnik_id: int, sprememba: int, izziv_id: Optional[int]
+    ) -> None:
+        with self.conn:
+            with self.conn.cursor() as cur:
+                cur.execute(
+                    """
+                    UPDATE uporabnik
+                    SET stanje = stanje + %s
+                    WHERE id = %s
+                    """,
+                    (sprememba, uporabnik_id),
+                )
+                if cur.rowcount == 0:
+                    raise ValueError(f"Uporabnik z IDjem {uporabnik_id} ne obstaja!")
+
+                cur.execute(
+                    """
+                    INSERT INTO transakcija (sprememba, cas, uporabnik, izziv)
+                    VALUES (%s, %s, %s, %s)
+                    """,
+                    (sprememba, datetime.datetime.now(), uporabnik_id, izziv_id),
+                )
 
     # --- TEKI ---
 
@@ -358,97 +383,4 @@ class Repo:
                     WHERE id = %s
                     """,
                     (izziv_id,),
-                )
-
-    # --- TRANSAKCIJE ---
-
-    def odvzemi_kovance_za_izziv(
-        self,
-        izziv_id: int,
-        uporabnik_id: int,
-        stava: int,
-    ) -> None:
-        with self.conn:
-            with self.conn.cursor() as cur:
-                cas_transakcije = datetime.datetime.now()
-                cur.execute(
-                    """
-                    UPDATE uporabnik
-                    SET stanje = stanje - %s
-                    WHERE id = %s
-                    """,
-                    (stava, uporabnik_id),
-                )
-
-                cur.execute(
-                    """
-                    INSERT INTO transakcija (sprememba, cas, uporabnik, izziv)
-                    VALUES (%s, %s, %s, %s)
-                    """,
-                    (
-                        -stava,
-                        cas_transakcije,
-                        uporabnik_id,
-                        izziv_id,
-                    ),
-                )
-
-    def izvedi_izplacilo_izziva(
-        self, izziv_id: int, zmagovalec_id: int, stava: int
-    ) -> None:
-        dobitek = 2 * stava  # zmagovalcu moramo vrniti tudi rezervirana sredstva
-        cas_transakcije = datetime.datetime.now()
-
-        with self.conn:
-            with self.conn.cursor() as cur:
-                cur.execute(
-                    """
-                    UPDATE uporabnik 
-                    SET stanje = stanje + %s 
-                    WHERE id = %s
-                    """,
-                    (dobitek, zmagovalec_id),
-                )
-
-                cur.execute(
-                    """
-                    INSERT INTO transakcija (sprememba, cas, uporabnik, izziv)
-                    VALUES (%s, %s, %s, %s)
-                    """,
-                    (dobitek, cas_transakcije, zmagovalec_id, izziv_id),
-                )
-
-    def vrni_stave_izziva(
-        self,
-        izziv_id: int,
-        uporabnik_stavi_id: int,
-        uporabnik_nasprotuje_id: int,
-        stava: int,
-    ) -> None:
-        cas_transakcije = datetime.datetime.now()
-        with self.conn:
-            with self.conn.cursor() as cur:
-                cur.execute(
-                    """
-                    UPDATE uporabnik
-                    SET stanje = stanje + %s
-                    WHERE id IN (%s, %s)
-                    """,
-                    (stava, uporabnik_stavi_id, uporabnik_nasprotuje_id),
-                )
-                cur.execute(
-                    """
-                    INSERT INTO transakcija (sprememba, cas, uporabnik, izziv)
-                    VALUES (%s, %s, %s, %s), (%s, %s, %s, %s)
-                    """,
-                    (
-                        stava,
-                        cas_transakcije,
-                        uporabnik_stavi_id,
-                        izziv_id,
-                        stava,
-                        cas_transakcije,
-                        uporabnik_nasprotuje_id,
-                        izziv_id,
-                    ),
                 )
