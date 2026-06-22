@@ -14,6 +14,7 @@ class TipIzziva(str, Enum):
 
 
 ZACETNO_STANJE = 100
+TEDENSKI_BONUS = 100
 
 
 @dataclass_json

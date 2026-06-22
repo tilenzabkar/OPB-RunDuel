@@ -199,3 +199,6 @@ class IzzivService:
                 izziv.uporabnik_nasprotuje, izziv.stava, izziv_id
             )
             self.repo.zakljuci_izziv(izziv_id)
+
+    def dobi_aktivne_potekle_izzive(self, cas: datetime.date) -> List[Izziv]:
+        return self.repo.dobi_aktivne_potekle_izzive(cas)

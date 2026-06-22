@@ -142,6 +142,26 @@ class Repo:
                     (sprememba, datetime.datetime.now(), uporabnik_id, izziv_id),
                 )
 
+    def je_uporabnik_dobil_bonus(
+        self, uporabnik_id: int, cas: datetime.datetime
+    ) -> bool:
+        start_of_week = cas - datetime.timedelta(days=cas.weekday())
+        start_of_week = start_of_week.replace(hour=0, minute=0, second=0, microsecond=0)
+        with self.conn:
+            with self.conn.cursor() as cur:
+                cur.execute(
+                    """
+                    SELECT COUNT(*) FROM transakcija
+                    WHERE uporabnik = %s
+                      AND sprememba = 100
+                      AND izziv IS NULL
+                      AND cas >= %s
+                    """,
+                    (uporabnik_id, start_of_week),
+                )
+
+                return cur.fetchone()[0] > 0
+
     # --- TEKI ---
 
     def dodaj_tek(
@@ -319,6 +339,20 @@ class Repo:
                 if vrstica is None:
                     raise ValueError(f"Izziv z IDjem {id} ne obstaja!")
                 return Izziv.from_dict(vrstica)
+
+    def dobi_aktivne_potekle_izzive(self, cas: datetime.datetime) -> List[Izziv]:
+        with self.conn:
+            with self.conn.cursor(cursor_factory=psycopg2.extras.DictCursor) as cur:
+                cur.execute(
+                    """
+                    SELECT * FROM izziv
+                    WHERE je_sprejet = TRUE
+                      AND je_zakljucen = FALSE
+                      AND datum_zacetka + INTERVAL '7 days' <= %s
+                    """,
+                    (cas,),
+                )
+                return [Izziv.from_dict(row) for row in cur.fetchall()]
 
     def dobi_izzive_uporabnika(self, uporabnik_id: int) -> List[IzzivDto]:
         with self.conn:

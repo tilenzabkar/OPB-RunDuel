@@ -14,7 +14,11 @@ load_dotenv(ROOT_DIR / ".env")
 from bottle import Bottle, request, redirect, run, static_file, template
 from beaker.middleware import SessionMiddleware
 
-from Data.models import TipIzziva, IzzivDto, Izziv
+from apscheduler.schedulers.background import BackgroundScheduler
+from apscheduler.triggers.cron import CronTrigger
+from apscheduler.triggers.interval import IntervalTrigger
+
+from Data.models import TipIzziva, IzzivDto, Izziv, TEDENSKI_BONUS
 from Services.auth_service import AuthService
 from Services.user_service import UserService
 from Services.tek_service import TekService
@@ -471,6 +475,29 @@ def finish_challenge(izziv_id):
     redirect(url)
 
 
+def weekly_coin_bonus():
+    print("Začenjam tedenski bonus")
+    try:
+        now = datetime.datetime.now() + datetime.timedelta(days=8)
+        for uporabnik in user_service.dobi_vse_uporabnike():
+            if not user_service.je_uporabnik_dobil_bonus(uporabnik.id, now):
+                user_service.povecaj_stanje_uporabniku(uporabnik.id, TEDENSKI_BONUS)
+                print(f"Izplačan bonus {TEDENSKI_BONUS} uporabniku {uporabnik.id}.")
+    except Exception as e:
+        print(f"Napaka pri izplačilu tedenskega bonusa: {str(e)}")
+
+
+def auto_finish_challenges():
+    print("Preverjam potekle izzive")
+    now = datetime.datetime.now()
+    for izziv in izziv_service.dobi_aktivne_potekle_izzive(now):
+        try:
+            izziv_service.zakljuci_izziv(izziv.id)
+            print(f"Zaključen izziv {izziv.id}")
+        except Exception as e:
+            print(f"  Napaka pri zaključevanju izziva {izziv.id}: {str(e)}")
+
+
 def _format_trajanje(sekunde: int) -> str:
     h = sekunde // 3600
     m = (sekunde % 3600) // 60
@@ -505,6 +532,22 @@ session_opts = {
 
 application = SessionMiddleware(app, session_opts)
 
+scheduler = BackgroundScheduler()
+
+scheduler.add_job(
+    weekly_coin_bonus,
+    trigger=CronTrigger(day_of_week="mon", hour=0, minute=0, second=0),
+    id="weekly_bonus",
+    replace_existing=True,
+)
+
+scheduler.add_job(
+    auto_finish_challenges,
+    trigger=IntervalTrigger(seconds=15),
+    id="auto_finish",
+    replace_existing=True,
+)
 
 if __name__ == "__main__":
-    run(app=application, host="localhost", port=8080, debug=True, reloader=True)
+    scheduler.start()
+    run(app=application, host="localhost", port=8080, debug=True, reloader=False)

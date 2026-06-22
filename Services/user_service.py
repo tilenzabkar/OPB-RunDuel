@@ -1,7 +1,8 @@
 from Data.repository import Repo
 from Data.models import UporabnikDto
 
-from typing import List
+from typing import List, Optional
+import datetime
 
 
 class UserService:
@@ -26,8 +27,18 @@ class UserService:
         """
         return self.repo.dobi_uporabnika_po_id(uporabnik_id)
 
-    def povecaj_stanje_uporabniku(self, uporabnik_id: int, sprememba: int) -> None:
+    def povecaj_stanje_uporabniku(
+        self, uporabnik_id: int, sprememba: int, izziv_id: Optional[int] = None
+    ) -> None:
         """
         Spremeni danemu uporabniku stanje za vrednost "sprememba" in shrani transakcijo.
         """
-        self.repo.povecaj_stanje_uporabniku(uporabnik_id, sprememba)
+        self.repo.povecaj_stanje_uporabniku(uporabnik_id, sprememba, izziv_id)
+
+    def je_uporabnik_dobil_bonus(
+        self, uporabnik_id: int, cas: datetime.datetime
+    ) -> bool:
+        """
+        Preveri, če je ta koledarski teden uporabnik že dobil bonus
+        """
+        return self.repo.je_uporabnik_dobil_bonus(uporabnik_id, cas)
