@@ -43,6 +43,16 @@ class Repo:
             with self.conn.cursor() as cur:
                 cur.execute(sql_script)
 
+    def podeli_pravice(self) -> None:
+        pot = os.path.join(os.path.dirname(__file__), "grant_privileges.sql")
+
+        with open(pot, encoding="utf-8") as f:
+            sql_script = f.read()
+
+        with self.conn:
+            with self.conn.cursor() as cur:
+                cur.execute(sql_script)
+
     def _dobi_mejo_razdalje(self, vrsta_izziva: TipIzziva) -> tuple[float, float]:
         meje = {
             TipIzziva.PET_KM: (5.0, 5.5),
