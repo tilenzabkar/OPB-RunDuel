@@ -1,7 +1,7 @@
 venv/
 *pycache*
 *DS_STORE
-.env
+.env.private
 
 Data/auth.py
 Data/sessions/

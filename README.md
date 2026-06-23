@@ -1,5 +1,5 @@
 # RunDuel
-RunDuel je spletna aplikacija, narejena kot projekt pri predmetu **Osnove podatkovnih baz**, kjer uporabniki med seboj tekmujejo v tekaških izivih in stavijo kovance. Vsak uporabnik ob registraciji prejme 100 kovancev, nato pa se lahko prijavi na izziv skupaj z enim prijateljem. Oba uporabnika stavita enako količino kovancev, po koncu izziva pa zmagovalec prejme kovance nasportnika. Cilj aplikacije je zmagovati v izzivih in zbrati čim več kovancev. Uporabniki tedensko dobijo 100 kovancev.
+RunDuel je spletna aplikacija pri predmetu **Osnove podatkovnih baz**, kjer uporabniki med seboj tekmujejo v tekaških izzivih, pri katerih stavijo kovance. Vsak uporabnik ob registraciji prejme 100 kovancev, nato pa se lahko prijavi na izziv skupaj z enim prijateljem. Oba uporabnika stavita enako količino kovancev, po koncu izziva pa zmagovalec prejme kovance nasprotnika. Cilj aplikacije je zmagovati v izzivih in zbrati čim več kovancev. Uporabniki tedensko dobijo 100 kovancev.
 
 Podprte vrste izzivov so:
 - najhitrejši čas na 5 km
@@ -8,16 +8,16 @@ Podprte vrste izzivov so:
 - najhitrejši čas na 42,2 km
 - največja pretečena razdalja
 
-V izzivih vrste najhitrejši čas zmaga uporabnik, ki ima najhitrejši povprečni tempo na dano razdaljo. V izzivu vrste največja pretečena razdalja zmaga uporabnik, ki v časovnem obdobju enega tedna preteče večjo razdaljo, kot del poljubno veliko tekov.
+V izzivih vrste najhitrejši čas zmaga uporabnik, ki ima najhitrejši povprečni tempo na dano razdaljo. V izzivu vrste največja pretečena razdalja zmaga uporabnik, ki v časovnem obdobju enega tedna preteče večjo razdaljo v okviru poljubnega števila tekov.
 
-Vsak izziv traja 1 teden. Sistem beleži uporabnike, teke, izzive, stave, transkacije in trenutno stanje kovancev.
+Vsak izziv traja 1 teden. Sistem beleži uporabnike, teke, izzive, stave, transakcije in trenutno stanje kovancev.
 
 ## ER Diagram
 ![RunDuel ER Diagram](er-diagram.png)
 
 ## Namestitev in zagon projekta
 
-### 1. Priprava okolja
+### Priprava okolja
 
 Priporočljivo je, da ustvarite navidezno okolje:
 
@@ -29,22 +29,27 @@ source venv/bin/activate
 Namestite vse potrebne knjižnice:
 
 ```bash
-pip install -r requirenments.txt
+pip install -r requirements.txt
 ```
 
-### 2. (Opcijsko) Pridobitev Strava API ključev
+### (Opcijsko) Pridobitev Strava API ključev
 
-Odprite `.env` datoteko in vnesite svoje podatke za Strava API. Te podatki za navadno delovanje aplikacije niso potrebni, so pa potrebni za sinhroniziranje tekov iz Strave.
+Odprite `.env` datoteko in vnesite svoje podatke za Strava API. Ti podatki za navadno delovanje aplikacije niso potrebni, so pa potrebni za sinhroniziranje tekov iz Strave. Za nadaljnja navodila obiščite [Strava API dokumentacijo](https://developers.strava.com/docs/getting-started/).
 
-### 3. Priprava podatkovne baze
+```env
+STRAVA_CLIENT_ID=tvoj_client_id
+STRAVA_CLIENT_SECRET=tvoj_client_secret
+```
 
-Zaženite skripto za pripravo tabel:
+### (Opcijsko) Inicializacija podatkovne baze
+
+> Ta korak je potreben samo pri prvi postavitvi aplikacije na novi podatkovni bazi.
 
 ```bash
 python init_db.py
 ```
 
-### 4. Zagon aplikacije
+### Zagon aplikacije
 
 Aplikacijo zaženete z:
 
@@ -54,7 +59,7 @@ python app.py
 
 Odprite brskalnik in pojdite na **http://localhost:8080**.
 
-# Uporaba aplikacije
+## Uporaba aplikacije
 
 ## Registracija in prijava
 
@@ -70,7 +75,7 @@ Po prijavi lahko svoje teke dodajate na dva načina:
 ### Ročni vnos
 Pri ročnem vnosu na gumbu **Dodaj tek** pod `/runs` vnesete:
 - datum teka,
-- razdalja,
+- razdaljo,
 - čas.
 
 ### Uvoz iz Strave
@@ -98,7 +103,7 @@ Ko nasprotnik izziv sprejme, postane **aktiven**.
 - Vsak izziv traja **7 dni**.
 - Po preteku obdobja se samodejno zaključi, uporabnik ga lahko tudi predčasno zaključi.
 
-Ob zaključku se določi zmagovalca izziva in se mu izplača stave. V primeru remija se stave povrnejo.
+Ob zaključku se določi zmagovalec izziva in se mu izplača stava. V primeru remija se stave povrnejo.
 
 ## Lestvica uporabnikov
 
