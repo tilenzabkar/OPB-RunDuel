@@ -194,8 +194,17 @@ def strava_connect():
     session.save()
 
     redirect_uri = "http://localhost:8080/strava/callback"
-    prijavni_url = strava_service.generiraj_prijavni_url(redirect_uri, state)
-    redirect(prijavni_url)
+    STRAVA_CLIENT_ID = os.environ.get("STRAVA_CLIENT_ID")
+    STRAVA_CLIENT_SECRET = os.environ.get("STRAVA_CLIENT_SECRET")
+    if not STRAVA_CLIENT_ID or not STRAVA_CLIENT_SECRET:
+        redirect(
+            f"/dashboard?error={quote("Vzpostavi si STRAVA_CLIENT_ID in STRAVA_SECRET_ID v .env!")}"
+        )
+    try:
+        prijavni_url = strava_service.generiraj_prijavni_url(redirect_uri, state)
+        redirect(prijavni_url)
+    except ValueError as e:
+        redirect(f"/dashboard?error={quote(str(e))}")
 
 
 @app.get("/strava/callback")
@@ -478,7 +487,7 @@ def finish_challenge(izziv_id):
 def weekly_coin_bonus():
     print("Začenjam tedenski bonus")
     try:
-        now = datetime.datetime.now() + datetime.timedelta(days=8)
+        now = datetime.datetime.now()
         for uporabnik in user_service.dobi_vse_uporabnike():
             if not user_service.je_uporabnik_dobil_bonus(uporabnik.id, now):
                 user_service.povecaj_stanje_uporabniku(uporabnik.id, TEDENSKI_BONUS)
@@ -543,7 +552,7 @@ scheduler.add_job(
 
 scheduler.add_job(
     auto_finish_challenges,
-    trigger=IntervalTrigger(seconds=15),
+    trigger=IntervalTrigger(minutes=1),
     id="auto_finish",
     replace_existing=True,
 )

@@ -1,5 +1,5 @@
 # RunDuel
-RunDuel je koncept aplikacije za predmet **Osnove podatkovnih baz**, kjer uporabniki med seboj tekmujejo v tekaških izivih in stavijo kovance. Vsak uporabnik ob registraciji prejme 100 kovancev, nato pa se lahko prijavi na izziv skupaj z enim prijateljem. Oba uporabnika stavita enako količino kovancev, po koncu izziva pa zmagovalec prejme kovance nasportnika. Cilj aplikacije je zmagovati v izzivih in zbrati čim več kovancev.
+RunDuel je spletna aplikacija, narejena kot projekt pri predmetu **Osnove podatkovnih baz**, kjer uporabniki med seboj tekmujejo v tekaških izivih in stavijo kovance. Vsak uporabnik ob registraciji prejme 100 kovancev, nato pa se lahko prijavi na izziv skupaj z enim prijateljem. Oba uporabnika stavita enako količino kovancev, po koncu izziva pa zmagovalec prejme kovance nasportnika. Cilj aplikacije je zmagovati v izzivih in zbrati čim več kovancev. Uporabniki tedensko dobijo 100 kovancev.
 
 Podprte vrste izzivov so:
 - najhitrejši čas na 5 km
@@ -8,7 +8,10 @@ Podprte vrste izzivov so:
 - najhitrejši čas na 42,2 km
 - največja pretečena razdalja
 
+V izzivih vrste najhitrejši čas zmaga uporabnik, ki ima najhitrejši povprečni tempo na dano razdaljo. V izzivu vrste največja pretečena razdalja zmaga uporabnik, ki v časovnem obdobju enega tedna preteče večjo razdaljo, kot del poljubno veliko tekov.
+
 Vsak izziv traja 1 teden. Sistem beleži uporabnike, teke, izzive, stave, transkacije in trenutno stanje kovancev.
+
 ## ER Diagram
 ![RunDuel ER Diagram](er-diagram.png)
 
@@ -29,15 +32,9 @@ Namestite vse potrebne knjižnice:
 pip install -r requirenments.txt
 ```
 
-### 2. Konfiguracija okolja (.env)
+### 2. (Opcijsko) Pridobitev Strava API ključev
 
-Kopirajte datoteko `.env.example` in jo preimenujte v `.env`:
-
-```bash
-cp .env.example .env
-```
-
-Odprite ustvarjeno `.env` datoteko in vnesite svoje podatke za bazo in Strava API.
+Odprite `.env` datoteko in vnesite svoje podatke za Strava API. Te podatki za navadno delovanje aplikacije niso potrebni, so pa potrebni za sinhroniziranje tekov iz Strave.
 
 ### 3. Priprava podatkovne baze
 
@@ -46,3 +43,77 @@ Zaženite skripto za pripravo tabel:
 ```bash
 python init_db.py
 ```
+
+### 4. Zagon aplikacije
+
+Aplikacijo zaženete z:
+
+```bash
+python app.py
+```
+
+Odprite brskalnik in pojdite na **http://localhost:8080**.
+
+# Uporaba aplikacije
+
+## Registracija in prijava
+
+- Ustvarite si uporabniški račun z uporabniškim imenom in geslom.
+- Po registraciji prejmete 100 kovancev.
+
+Lahko se tudi prijavite z že obstoječimi podatki.
+
+## Dodajanje tekov
+
+Po prijavi lahko svoje teke dodajate na dva načina:
+
+### Ročni vnos
+Pri ročnem vnosu na gumbu **Dodaj tek** pod `/runs` vnesete:
+- datum teka,
+- razdalja,
+- čas.
+
+### Uvoz iz Strave
+1. Kliknite na **Uvozi iz Strave** na (`/runs` ali `/dashboard`)
+2. Prijavite se v Stravo in odobrite dostop
+3. Teki se bodo uvozili v aplikacijo
+
+Opomba: Če se uporabnik želi še z drugim računom prijaviti v Stravo, mora najprej klikniti na **Odjava iz Strave**, sicer ima lahko težave s piškotki, ki jih shranjuje Strava.
+
+## Izzivi
+
+### Ustvarjanje izziva
+
+1. Odprite stran **Izzivi**.
+2. Kliknite **Nov izziv**.
+3. Izberite:
+   - nasprotnika,
+   - vrsto izziva,
+   - višino stave.
+4. Pošljite izziv.
+
+Ko nasprotnik izziv sprejme, postane **aktiven**.
+
+### Trajanje izziva
+- Vsak izziv traja **7 dni**.
+- Po preteku obdobja se samodejno zaključi, uporabnik ga lahko tudi predčasno zaključi.
+
+Ob zaključku se določi zmagovalca izziva in se mu izplača stave. V primeru remija se stave povrnejo.
+
+## Lestvica uporabnikov
+
+Na strani **Uporabniki** je prikazana lestvica vseh uporabnikov.
+
+- Uporabniki so razvrščeni po številu kovancev.
+- Prikazani so od najbogatejšega do najrevnejšega.
+
+
+## Tedenski bonus
+
+- Vsak ponedeljek ob **00:00** vsi uporabniki prejmejo **100 kovancev**.
+- Bonus se vsakemu uporabniku dodeli največ enkrat na teden.
+
+## Samodejno zaključevanje izzivov
+
+- Vsako minuto se preverijo vsi aktivni izzivi.
+- Samodejno se zaključijo tisti, ki trajajo več kot **7 dni**.
