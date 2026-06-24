@@ -542,6 +542,24 @@ def _lep_izpis_vrste(vrsta: TipIzziva) -> str:
     return mapiranje.get(vrsta, vrsta.value)
 
 
+class BinderPrefixMiddleware:
+
+    def __init__(self, app):
+        self.app = app
+
+    def __call__(self, environ, start_response):
+        prefix = os.environ.get("BOTTLE_ROOT", "")
+        if prefix:
+            prefix = "/" + prefix.strip("/")
+            path = environ.get("PATH_INFO", "")
+            if path.startswith(prefix):
+                new_path = path[len(prefix):]
+                environ["PATH_INFO"] = new_path if new_path.startswith("/") else "/" + new_path
+                if environ["PATH_INFO"] == "":
+                    environ["PATH_INFO"] = "/"
+        return self.app(environ, start_response)
+
+
 session_opts = {
     "session.type": "file",
     "session.cookie_expires": 3600,
@@ -549,7 +567,7 @@ session_opts = {
     "session.auto": True,
 }
 
-application = SessionMiddleware(app, session_opts)
+application = BinderPrefixMiddleware(SessionMiddleware(app, session_opts))
 
 scheduler = BackgroundScheduler()
 
