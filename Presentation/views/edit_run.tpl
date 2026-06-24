@@ -2,7 +2,7 @@
 
 <h2>Uredi tek</h2>
 
-<form method="post" action="/runs/{{ tek.id }}/edit">
+<form method="post" action="{{url('runs/' + str(tek.id) + '/edit')}}">
     <div class="mb-3">
         <label class="form-label">Datum</label>
         <input class="form-control" type="datetime-local" name="datum" 
@@ -31,5 +31,5 @@
     </div>
 
     <button class="btn btn-primary" type="submit">Shrani spremembe</button>
-    <a class="btn btn-secondary" href="/runs">Prekliči</a>
+    <a class="btn btn-secondary" href="{{url('runs')}}">Prekliči</a>
 </form>

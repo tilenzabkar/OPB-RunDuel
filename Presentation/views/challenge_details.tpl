@@ -95,4 +95,4 @@
         % end
     </div>
 
-<a href="/challenges" class="btn btn-secondary">Nazaj na seznam</a>
+<a href="{{url('challenges')}}" class="btn btn-secondary">Nazaj na seznam</a>

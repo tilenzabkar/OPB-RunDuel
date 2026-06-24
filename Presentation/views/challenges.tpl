@@ -2,7 +2,7 @@
 
 <h2>Izzivi</h2>
 
-<a class="btn btn-success mb-3" href="/challenges/new">Nov izziv</a>
+<a class="btn btn-success mb-3" href="{{url('challenges/new')}}">Nov izziv</a>
 
 <table class="table table-bordered table-striped">
     <thead>
@@ -44,18 +44,18 @@
                 </td>
 
                 <td>
-                    <a href="/challenges/{{izziv.id}}" class="btn btn-sm btn-info">Podrobnosti</a>
+                    <a href="{{url('challenges/' + str(izziv.id))}}" class="btn btn-sm btn-info">Podrobnosti</a>
                 </td>
                 <td>
                     % if izziv.je_zakljucen:
                         <span class="text-muted">Zaključeno</span>
                     % elif izziv.je_sprejet:
-                        <form method="post" action="/challenges/{{izziv.id}}/finish">
+                        <form method="post" action="{{url('challenges/' + str(izziv.id) + '/finish')}}">
                                 <button class="btn btn-sm btn-warning">Zaključi</button>
                         </form>
                     % else:
                         % if user["id"] == izziv.uporabnik_nasprotuje:
-                            <form method="post" action="/challenges/{{izziv.id}}/accept">
+                            <form method="post" action="{{url('challenges/' + str(izziv.id) + '/accept')}}">
                                 <button class="btn btn-sm btn-primary">Sprejmi</button>
                             </form>
                         % elif user["id"] == izziv.uporabnik_stavi:

@@ -14,10 +14,10 @@
 
             <p>Skupni čas: {{format_trajanje(skupno_trajanje)}}</p>
 
-            <a class="btn btn-primary" href="/runs">Poglej teke</a>
-            <a class="btn btn-success" href="/runs/new">Dodaj tek</a>
-            <a class="btn btn-warning" href="/strava/connect">Uvozi iz Strave</a>
-            <a class="btn btn-danger" href="/strava/logout" target="_blank" rel="noopener noreferrer">Odjava iz Strave</a>
+            <a class="btn btn-primary" href="{{url('runs')}}">Poglej teke</a>
+            <a class="btn btn-success" href="{{url('runs/new')}}">Dodaj tek</a>
+            <a class="btn btn-warning" href="{{url('strava/connect')}}">Uvozi iz Strave</a>
+            <a class="btn btn-danger" href="{{url('strava/logout')}}" target="_blank" rel="noopener noreferrer">Odjava iz Strave</a>
         </div>
     </div>
 
@@ -26,8 +26,8 @@
             <h4>Izzivi</h4>
             <p>Število izzivov: {{len(izzivi)}}</p>
 
-            <a class="btn btn-primary" href="/challenges">Poglej izzive</a>
-            <a class="btn btn-success" href="/challenges/new">Nov izziv</a>
+            <a class="btn btn-primary" href="{{url('challenges')}}">Poglej izzive</a>
+            <a class="btn btn-success" href="{{url('challenges/new')}}">Nov izziv</a>
         </div>
     </div>
 </div>

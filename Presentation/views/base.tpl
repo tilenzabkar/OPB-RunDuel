@@ -9,25 +9,25 @@
         rel="stylesheet"
     >
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
-    <link rel="stylesheet" href="/static/style.css">
+    <link rel="stylesheet" href="{{url('static/style.css')}}">
 </head>
 
 <body class="bg-light">
 
 <nav class="navbar navbar-expand navbar-dark bg-dark mb-4">
     <div class="container">
-        <a class="navbar-brand" href="/">RunDuel</a>
+        <a class="navbar-brand" href="{{url('')}}">RunDuel</a>
 
         <div class="navbar-nav">
             % if user:
-                <a class="nav-link" href="/dashboard">Dashboard</a>
-                <a class="nav-link" href="/runs">Teki</a>
-                <a class="nav-link" href="/challenges">Izzivi</a>
-                <a class="nav-link" href="/users">Lestvica</a>
-                <a class="nav-link" href="/logout">Odjava</a>
+                <a class="nav-link" href="{{url('dashboard')}}">Dashboard</a>
+                <a class="nav-link" href="{{url('runs')}}">Teki</a>
+                <a class="nav-link" href="{{url('challenges')}}">Izzivi</a>
+                <a class="nav-link" href="{{url('users')}}">Lestvica</a>
+                <a class="nav-link" href="{{url('logout')}}">Odjava</a>
             % else:
-                <a class="nav-link" href="/login">Prijava</a>
-                <a class="nav-link" href="/register">Registracija</a>
+                <a class="nav-link" href="{{url('login')}}">Prijava</a>
+                <a class="nav-link" href="{{url('register')}}">Registracija</a>
             % end
         </div>
     </div>

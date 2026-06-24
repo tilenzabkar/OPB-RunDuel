@@ -26,5 +26,5 @@
     </div>
 
     <button class="btn btn-success">Shrani</button>
-    <a class="btn btn-secondary" href="/runs">Nazaj</a>
+    <a class="btn btn-secondary" href="{{url('runs')}}">Nazaj</a>
 </form>

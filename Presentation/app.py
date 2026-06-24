@@ -35,6 +35,15 @@ tek_service = TekService()
 izziv_service = IzzivService()
 strava_service = StravaService()
 
+
+def url(path=""):
+    root = os.environ.get("BOTTLE_ROOT", "/")
+    if not root.endswith("/"):
+        root += "/"
+    path = str(path).lstrip("/")
+    return root + path
+
+
 ROOT = Path(__file__).resolve().parent.parent
 VIEWS_DIR = ROOT / "Presentation" / "views"
 STATIC_DIR = ROOT / "Presentation" / "static"
@@ -72,11 +81,12 @@ def refresh_current_user():
 
 def require_login():
     if current_user() is None:
-        redirect("/login")
+        redirect(url("login"))
 
 
 def render(view, **kwargs):
     kwargs.setdefault("user", current_user())
+    kwargs.setdefault("url", url)
     kwargs.setdefault("error", request.query.getunicode("error") or None)
     kwargs.setdefault("success", request.query.getunicode("success") or None)
     kwargs.setdefault("format_trajanje", _format_trajanje)
@@ -116,7 +126,7 @@ def register_post():
         save_user_to_session(uporabnik)
     except Exception as e:
         return render("register.tpl", error=str(e))
-    redirect("/dashboard?success=Uspešno si ustvaril račun.")
+    redirect(url("dashboard?success=Uspešno si ustvaril račun."))
 
 
 @app.get("/login")
@@ -136,7 +146,7 @@ def login_post():
     except Exception as e:
         return render("login.tpl", error=str(e))
 
-    redirect("/dashboard")
+    redirect(url("dashboard"))
 
 
 @app.get("/logout")
@@ -144,7 +154,7 @@ def logout():
     session = get_session()
     if session:
         session.delete()
-    redirect("/")
+    redirect(url(""))
 
 
 @app.get("/dashboard")
@@ -198,13 +208,13 @@ def strava_connect():
     STRAVA_CLIENT_SECRET = os.environ.get("STRAVA_CLIENT_SECRET")
     if not STRAVA_CLIENT_ID or not STRAVA_CLIENT_SECRET:
         redirect(
-            f"/dashboard?error={quote("Vzpostavi si STRAVA_CLIENT_ID in STRAVA_SECRET_ID v .env!")}"
+            url(f"dashboard?error={quote("Vzpostavi si STRAVA_CLIENT_ID in STRAVA_SECRET_ID v .env!")}")
         )
     try:
         prijavni_url = strava_service.generiraj_prijavni_url(redirect_uri, state)
         redirect(prijavni_url)
     except ValueError as e:
-        redirect(f"/dashboard?error={quote(str(e))}")
+        redirect(url(f"dashboard?error={quote(str(e))}"))
 
 
 @app.get("/strava/callback")
@@ -213,17 +223,17 @@ def strava_callback():
     code = request.query.get("code")
     error = request.query.get("error")
     if error:
-        redirect(f"/runs?error=Strava povezava ni bila odobrena: {error}")
+        redirect(url(f"runs?error=Strava povezava ni bila odobrena: {error}"))
     if not code:
-        redirect("/runs?error=Strava ni vrnila avtorizacijske kode.")
+        redirect(url("runs?error=Strava ni vrnila avtorizacijske kode."))
 
     state = request.query.get("state")
     session = get_session()
     if state != session.get("strava_state"):
-        redirect("/runs?error=Invalid OAuth state")
+        redirect(url("runs?error=Invalid OAuth state"))
 
     if current_user()["id"] != session.get("strava_user_id"):
-        redirect("/runs?error=OAuth user mismatch")
+        redirect(url("runs?error=OAuth user mismatch"))
 
     try:
         access_token = strava_service.pridobi_dostopni_zeton(code)
@@ -233,11 +243,11 @@ def strava_callback():
         )
 
         msg = f"Uvoženih je bilo {len(shranjeni_teki)} tekov iz Strave."
-        url = f"/runs?success={quote(msg)}"
+        redirect_url = url(f"/runs?success={quote(msg)}")
     except Exception as e:
-        url = f"/runs?error=Napaka pri uvozu iz Strave: {str(e)}"
+        redirect_url = url(f"runs?error=Napaka pri uvozu iz Strave: {str(e)}")
 
-    redirect(url)
+    redirect(redirect_url)
 
 
 @app.get("/strava/logout")
@@ -268,11 +278,11 @@ def add_run_post():
         trajanje_sekunde = ure * 3600 + minute * 60 + sekunde
         tek_service.dodaj_tek(user["id"], datum, razdalja, trajanje_sekunde)
         msg = quote("Tek je bil uspešno dodan.")
-        url = f"/runs?success={msg}"
+        redirect_url = url(f"runs?success={msg}")
     except Exception as e:
         return render("add_run.tpl", error=str(e))
 
-    redirect(url)
+    redirect(redirect_url)
 
 
 @app.get("/runs/<tek_id:int>/edit")
@@ -285,9 +295,9 @@ def edit_run_get(tek_id):
             raise PermissionError("Nimate dovoljenja za urejanje tega teka.")
         return render("edit_run.tpl", tek=tek)
     except ValueError:
-        redirect("/runs?error=Tek ne obstaja.")
+        redirect(url("runs?error=Tek ne obstaja."))
     except PermissionError as e:
-        redirect(f"/runs?error={quote(str(e))}")
+        redirect(url(f"runs?error={quote(str(e))}"))
 
 
 @app.post("/runs/<tek_id:int>/edit")
@@ -308,11 +318,11 @@ def edit_run_post(tek_id):
         tek_service.preveri_in_posodobi_tek(tek_id, user_id, datum, razdalja, trajanje)
 
         msg = "Tek je bil uspešno posodobljen."
-        url = f"/runs?success={quote(msg)}"
+        redirect_url = url(f"runs?success={quote(msg)}")
     except Exception as e:
-        url = f"/runs?error={quote(str(e))}"
+        redirect_url = url(f"runs?error={quote(str(e))}")
 
-    redirect(url)
+    redirect(redirect_url)
 
 
 @app.post("/runs/<tek_id:int>/delete")
@@ -322,11 +332,11 @@ def delete_run(tek_id):
     try:
         tek_service.preveri_in_izbrisi_tek(tek_id, user_id)
         msg = quote("Tek je bil uspešno izbrisan.")
-        url = f"/runs?success={msg}"
+        redirect_url = url(f"runs?success={msg}")
     except Exception as e:
-        url = f"/runs?error={quote(str(e))}"
+        redirect_url = url(f"runs?error={quote(str(e))}")
 
-    redirect(url)
+    redirect(redirect_url)
 
 
 @app.get("/challenges")
@@ -369,7 +379,7 @@ def create_challenge_post():
         )
 
         msg = "Izziv je bil ustvarjen."
-        url = f"/challenges?success={quote(msg)}"
+        redirect_url = url(f"challenges?success={quote(msg)}")
     except Exception as e:
         uporabniki = [
             u for u in user_service.dobi_vse_uporabnike() if u.id != user["id"]
@@ -382,7 +392,7 @@ def create_challenge_post():
             error=str(e),
         )
 
-    redirect(url)
+    redirect(redirect_url)
 
 
 @app.get("/challenges/<izziv_id:int>")
@@ -421,7 +431,7 @@ def challenge_detail(izziv_id):
             dobi_uporabnika_po_id=user_service.dobi_uporabnika_po_id,
         )
     except Exception as e:
-        redirect(f"/challenges?error={quote(str(e))}")
+        redirect(url(f"challenges?error={quote(str(e))}"))
 
 
 # funkcija za testiranje
@@ -454,11 +464,11 @@ def accept_challenge(izziv_id):
     try:
         izziv_service.sprejmi_izziv(izziv_id, user_id)
         msg = "Izziv je bil sprejet."
-        url = f"/challenges?success={quote(msg)}"
+        redirect_url = url(f"challenges?success={quote(msg)}")
     except Exception as e:
-        url = f"/challenges?error={quote(str(e))}"
+        redirect_url = url(f"challenges?error={quote(str(e))}")
 
-    redirect(url)
+    redirect(redirect_url)
 
 
 @app.post("/challenges/<izziv_id:int>/finish")
@@ -471,7 +481,7 @@ def finish_challenge(izziv_id):
         izziv_service.zakljuci_izziv(izziv_id)
         refresh_current_user()
         msg = "Izziv je bil zaključen."
-        url = f"/challenges?success={quote(msg)}"
+        redirect_url = url(f"challenges?success={quote(msg)}")
     except Exception as e:
         user = current_user()
         izzivi = izziv_service.dobi_izzive(user["id"])
@@ -481,7 +491,7 @@ def finish_challenge(izziv_id):
             error=str(e),
         )
 
-    redirect(url)
+    redirect(redirect_url)
 
 
 def weekly_coin_bonus():
@@ -559,4 +569,10 @@ scheduler.add_job(
 
 if __name__ == "__main__":
     scheduler.start()
-    run(app=application, host="localhost", port=8080, debug=True, reloader=False)
+    port = int(os.environ.get("BOTTLE_PORT", 8080))
+    reloader = os.environ.get("BOTTLE_RELOADER", "0") == "1"
+    if os.environ.get("BOTTLE_ROOT"):
+        print(f"Odpri aplikacijo na Binderju: {os.environ.get('BOTTLE_ROOT')}")
+    else:
+        print(f"Odpri aplikacijo lokalno: http://localhost:{port}/")
+    run(app=application, host="0.0.0.0", port=port, debug=True, reloader=reloader)

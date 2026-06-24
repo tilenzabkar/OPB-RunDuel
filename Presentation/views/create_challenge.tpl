@@ -41,5 +41,5 @@
     </div>
 
     <button class="btn btn-success">Ustvari</button>
-    <a class="btn btn-secondary" href="/challenges">Nazaj</a>
+    <a class="btn btn-secondary" href="{{url('challenges')}}">Nazaj</a>
 </form>

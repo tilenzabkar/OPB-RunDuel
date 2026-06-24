@@ -5,8 +5,8 @@
 <p>Tekmuj s prijatelji v tekaških izzivih.</p>
 
 % if user:
-    <a class="btn btn-primary" href="/dashboard">Dashboard</a>
+    <a class="btn btn-primary" href="{{url('dashboard')}}">Dashboard</a>
 % else:
-    <a class="btn btn-primary" href="/login">Prijava</a>
-    <a class="btn btn-success" href="/register">Registracija</a>
+    <a class="btn btn-primary" href="{{url('login')}}">Prijava</a>
+    <a class="btn btn-success" href="{{url('register')}}">Registracija</a>
 % end
