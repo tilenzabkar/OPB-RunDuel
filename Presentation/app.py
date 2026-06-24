@@ -208,7 +208,7 @@ def strava_connect():
     STRAVA_CLIENT_SECRET = os.environ.get("STRAVA_CLIENT_SECRET")
     if not STRAVA_CLIENT_ID or not STRAVA_CLIENT_SECRET:
         redirect(
-            url(f"dashboard?error={quote("Vzpostavi si STRAVA_CLIENT_ID in STRAVA_SECRET_ID v .env!")}")
+            url(f"dashboard?error={quote('Vzpostavi si STRAVA_CLIENT_ID in STRAVA_SECRET_ID v .env!')}")
         )
     try:
         prijavni_url = strava_service.generiraj_prijavni_url(redirect_uri, state)
