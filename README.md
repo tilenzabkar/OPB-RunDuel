@@ -17,6 +17,14 @@ Vsak izziv traja 1 teden. Sistem beleži uporabnike, teke, izzive, stave, transa
 
 ## Namestitev in zagon projekta
 
+### Zagon prek Binderja
+
+Aplikacijo lahko najlažje preizkusite prek Binderja:
+
+[![Binder](https://mybinder.org/badge_logo.svg)](https://mybinder.org/v2/gh/tilenzabkar/OPB-RunDuel/main?urlpath=proxy/8080)
+
+Binder bo samodejno pripravil okolje in zagnal aplikacijo.
+
 ### Priprava okolja
 
 Priporočljivo je, da ustvarite navidezno okolje:
@@ -54,7 +62,7 @@ python init_db.py
 Aplikacijo zaženete z:
 
 ```bash
-python app.py
+python Presentation/app.py
 ```
 
 Odprite brskalnik in pojdite na **http://localhost:8080**.
