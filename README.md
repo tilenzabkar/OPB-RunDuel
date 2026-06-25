@@ -25,6 +25,8 @@ Aplikacijo lahko najlažje preizkusite prek Binderja:
 
 Binder bo samodejno pripravil okolje in zagnal aplikacijo.
 
+### Zagon prek Pythona
+
 ### Priprava okolja
 
 Priporočljivo je, da ustvarite navidezno okolje:
