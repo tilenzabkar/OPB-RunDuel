@@ -538,7 +538,24 @@ def _lep_izpis_vrste(vrsta: TipIzziva) -> str:
         TipIzziva.POL_MARATON: "Najhitrejši tek na pol maraton (21 km)",
         TipIzziva.MARATON: "Najhitrejši tek na maraton (42 km)",
         TipIzziva.TEDENSKA_RAZDALJA: "Skupna pretečena razdalja v enem tednu",
+
+        "pet_km": "Najhitrejši tek na 5 km",
+        "deset_km": "Najhitrejši tek na 10 km",
+        "pol_maraton": "Najhitrejši tek na pol maraton (21 km)",
+        "maraton": "Najhitrejši tek na maraton (42 km)",
+        "tedenska_razdalja": "Skupna pretečena razdalja v enem tednu",
+
+        "PET_KM": "Najhitrejši tek na 5 km",
+        "DESET_KM": "Najhitrejši tek na 10 km",
+        "POL_MARATON": "Najhitrejši tek na pol maraton (21 km)",
+        "MARATON": "Najhitrejši tek na maraton (42 km)",
+        "TEDENSKA_RAZDALJA": "Skupna pretečena razdalja v enem tednu",
     }
+
+    if vrsta in mapiranje:
+        return mapiranje[vrsta]
+    if hasattr(vrsta, "value"):
+        return mapiranje.get(vrsta.value, vrsta.value)
     return mapiranje.get(vrsta, vrsta.value)
 
 
