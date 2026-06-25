@@ -25,7 +25,7 @@ Aplikacijo lahko najlažje preizkusite prek Binderja:
 
 Binder bo samodejno pripravil okolje in zagnal aplikacijo.
 
-> Opomba: Za delovanje Strave povezave na Binderju je potrebno na dashboardu ročno vnesti Strava API ključe.
+> Opomba: Za delovanje Strava povezave na Binderju je potrebno na dashboardu ročno vnesti Strava API ključe.
 
 ### Zagon prek Pythona
 
@@ -45,6 +45,8 @@ pip install -r requirements.txt
 ```
 
 ### (Opcijsko) Pridobitev Strava API ključev
+
+Če imate Strava API ključe za aplikacijo, se lahko več Strava uporabnikov prijavi z uporabo istega API ključa prek Strava vmesnika. Trenutna omejitev je 10 različnih uporabnikov na en ključ.
 
 Odprite `.env` datoteko in vnesite svoje podatke za Strava API. Ti podatki za navadno delovanje aplikacije niso potrebni, so pa potrebni za sinhroniziranje tekov iz Strave. Za nadaljnja navodila obiščite [Strava API dokumentacijo](https://developers.strava.com/docs/getting-started/).
 
