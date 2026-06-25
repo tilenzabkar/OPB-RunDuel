@@ -81,6 +81,15 @@
                     <i class="bi bi-box-arrow-right me-1"></i>
                     Odjava iz Strave
                 </a>
+                % if not STRAVA_CLIENT_ID:
+                    <form action="{{url('strava/setup')}}" method="post" class="mt-3 w-100">
+                        <input class="form-control mb-2" name="client_id" placeholder="Strava Client ID" required>
+                        <input class="form-control mb-2" name="client_secret" placeholder="Strava Client Secret" required>
+                        <button class="btn btn-outline-primary w-100" type="submit">
+                            Shrani Strava podatke
+                        </button>
+                    </form>
+                % end
             </div>
         </div>
     </div>

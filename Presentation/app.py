@@ -167,12 +167,18 @@ def dashboard():
     izzivi = izziv_service.dobi_izzive(user["id"])
     skupna_razdalja = sum(tek.razdalja for tek in teki)
     skupno_trajanje = sum(tek.trajanje for tek in teki)
+
+    session = get_session()
+    STRAVA_CLIENT_ID = session.get("STRAVA_CLIENT_ID") or os.environ.get(
+        "STRAVA_CLIENT_ID"
+    )
     return render(
         "dashboard.tpl",
         teki=teki,
         izzivi=izzivi,
         skupna_razdalja=skupna_razdalja,
         skupno_trajanje=skupno_trajanje,
+        STRAVA_CLIENT_ID=STRAVA_CLIENT_ID,
     )
 
 
@@ -193,6 +199,17 @@ def runs():
     return render("runs.tpl", teki=teki)
 
 
+@app.post("/strava/setup")
+def strava_setup_post():
+    session = get_session()
+
+    session["STRAVA_CLIENT_ID"] = request.forms.get("client_id")
+    session["STRAVA_CLIENT_SECRET"] = request.forms.get("client_secret")
+
+    session.save()
+    redirect(url("dashboard"))
+
+
 @app.get("/strava/connect")
 def strava_connect():
     require_login()
@@ -204,16 +221,31 @@ def strava_connect():
     session.save()
 
     redirect_uri = "http://localhost:8080/strava/callback"
-    STRAVA_CLIENT_ID = os.environ.get("STRAVA_CLIENT_ID")
-    STRAVA_CLIENT_SECRET = os.environ.get("STRAVA_CLIENT_SECRET")
+
+    STRAVA_CLIENT_ID = os.environ.get("STRAVA_CLIENT_ID") or session.get(
+        "STRAVA_CLIENT_ID"
+    )
+
+    STRAVA_CLIENT_SECRET = os.environ.get("STRAVA_CLIENT_SECRET") or session.get(
+        "STRAVA_CLIENT_SECRET"
+    )
+
     if not STRAVA_CLIENT_ID or not STRAVA_CLIENT_SECRET:
         redirect(
-            url(f"dashboard?error={quote('Vzpostavi si STRAVA_CLIENT_ID in STRAVA_SECRET_ID v .env!')}")
+            url(
+                f"dashboard?error={quote('Vzpostavi si STRAVA_CLIENT_ID in STRAVA_SECRET_ID!')}"
+            )
         )
     try:
-        prijavni_url = strava_service.generiraj_prijavni_url(redirect_uri, state)
+        prijavni_url = strava_service.generiraj_prijavni_url(
+            redirect_uri, state, STRAVA_CLIENT_ID
+        )
         redirect(prijavni_url)
     except ValueError as e:
+        session.pop("STRAVA_CLIENT_ID", None)
+        session.pop("STRAVA_CLIENT_SECRET", None)
+        session.save()
+
         redirect(url(f"dashboard?error={quote(str(e))}"))
 
 
@@ -236,7 +268,9 @@ def strava_callback():
         redirect(url("runs?error=OAuth user mismatch"))
 
     try:
-        access_token = strava_service.pridobi_dostopni_zeton(code)
+        access_token = strava_service.pridobi_dostopni_zeton(
+            code, session["STRAVA_CLIENT_ID"], session["STRAVA_CLIENT_SECRET"]
+        )
         shranjeni_teki = strava_service.dobi_teke_iz_strave(
             current_user()["id"],
             access_token,
@@ -538,13 +572,11 @@ def _lep_izpis_vrste(vrsta: TipIzziva) -> str:
         TipIzziva.POL_MARATON: "Najhitrejši tek na pol maraton (21 km)",
         TipIzziva.MARATON: "Najhitrejši tek na maraton (42 km)",
         TipIzziva.TEDENSKA_RAZDALJA: "Skupna pretečena razdalja v enem tednu",
-
         "pet_km": "Najhitrejši tek na 5 km",
         "deset_km": "Najhitrejši tek na 10 km",
         "pol_maraton": "Najhitrejši tek na pol maraton (21 km)",
         "maraton": "Najhitrejši tek na maraton (42 km)",
         "tedenska_razdalja": "Skupna pretečena razdalja v enem tednu",
-
         "PET_KM": "Najhitrejši tek na 5 km",
         "DESET_KM": "Najhitrejši tek na 10 km",
         "POL_MARATON": "Najhitrejši tek na pol maraton (21 km)",
@@ -570,8 +602,10 @@ class BinderPrefixMiddleware:
             prefix = "/" + prefix.strip("/")
             path = environ.get("PATH_INFO", "")
             if path.startswith(prefix):
-                new_path = path[len(prefix):]
-                environ["PATH_INFO"] = new_path if new_path.startswith("/") else "/" + new_path
+                new_path = path[len(prefix) :]
+                environ["PATH_INFO"] = (
+                    new_path if new_path.startswith("/") else "/" + new_path
+                )
                 if environ["PATH_INFO"] == "":
                     environ["PATH_INFO"] = "/"
         return self.app(environ, start_response)

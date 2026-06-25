@@ -5,12 +5,7 @@ from psycopg2.errors import UniqueViolation
 import os
 import requests
 from datetime import datetime
-from dotenv import load_dotenv
 
-load_dotenv()
-
-STRAVA_CLIENT_ID = os.environ.get("STRAVA_CLIENT_ID")
-STRAVA_CLIENT_SECRET = os.environ.get("STRAVA_CLIENT_SECRET")
 STRAVA_API_URL = "https://www.strava.com/api/v3"
 
 
@@ -18,17 +13,19 @@ class StravaService:
     def __init__(self):
         self.repo = Repo()
 
-    def generiraj_prijavni_url(self, redirect_uri: str, state: str) -> str:
+    def generiraj_prijavni_url(
+        self, redirect_uri: str, state: str, client_id: str
+    ) -> str:
         """
         Vrne URL, na katerega mora API preusmeriti uporabnika,
         da se prijavi v Stravo in naši aplikaciji odobri dostop do svojih tekov.
         """
-        if STRAVA_CLIENT_ID is None:
+        if client_id is None:
             raise ValueError("Napaka pri konfiguraciji Strava API ključev!")
 
         url = (
             f"https://www.strava.com/oauth/authorize"
-            f"?client_id={STRAVA_CLIENT_ID}"
+            f"?client_id={client_id}"
             f"&response_type=code"
             f"&redirect_uri={redirect_uri}"
             f"&approval_prompt=force"
@@ -37,18 +34,20 @@ class StravaService:
         )
         return url
 
-    def pridobi_dostopni_zeton(self, auth_koda: str) -> str:
+    def pridobi_dostopni_zeton(
+        self, auth_koda: str, client_id: str, client_secret: str
+    ) -> str:
         """
         Vrne access token (dostopni žeton).
         """
 
-        if STRAVA_CLIENT_ID is None or STRAVA_CLIENT_SECRET is None:
+        if client_id is None or client_secret is None:
             raise ValueError("Napaka pri konfiguraciji Strava API ključev!")
 
         url = "https://www.strava.com/oauth/token"
         payload = {
-            "client_id": STRAVA_CLIENT_ID,
-            "client_secret": STRAVA_CLIENT_SECRET,
+            "client_id": client_id,
+            "client_secret": client_secret,
             "code": auth_koda,
             "grant_type": "authorization_code",
         }

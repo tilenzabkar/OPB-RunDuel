@@ -25,6 +25,8 @@ Aplikacijo lahko najlažje preizkusite prek Binderja:
 
 Binder bo samodejno pripravil okolje in zagnal aplikacijo.
 
+> Opomba: Za delovanje Strave povezave na Binderju je potrebno na dashboardu ročno vnesti Strava API ključe.
+
 ### Zagon prek Pythona
 
 ### Priprava okolja
