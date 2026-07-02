@@ -220,9 +220,7 @@ def strava_connect():
     session["strava_user_id"] = current_user()["id"]
     session.save()
 
-    scheme = request.environ.get("wsgi.url_scheme", "http")
-    host = request.environ.get("HTTP_HOST", "localhost:8080")
-    redirect_uri = f"{scheme}://{host}{url('/strava/callback')}"
+    redirect_uri = "http://localhost:8080/strava/callback"
 
     STRAVA_CLIENT_ID = os.environ.get("STRAVA_CLIENT_ID") or session.get(
         "STRAVA_CLIENT_ID"
