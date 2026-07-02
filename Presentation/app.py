@@ -43,6 +43,18 @@ def url(path=""):
     path = str(path).lstrip("/")
     return root + path
 
+def external_url(path=""):
+    root = url(path)
+    scheme = request.environ.get("HTTP_X_FORWARDED_PROTO")
+    if not scheme:
+        scheme = request.environ.get("wsgi.url_scheme", request.urlparts.scheme)
+
+    host = request.environ.get("HTTP_X_FORWARDED_HOST")
+    if not host:
+        host = request.environ.get("HTTP_HOST", request.urlparts.netloc)
+
+    return f"{scheme}://{host}{root}"
+
 
 ROOT = Path(__file__).resolve().parent.parent
 VIEWS_DIR = ROOT / "Presentation" / "views"
@@ -220,9 +232,7 @@ def strava_connect():
     session["strava_user_id"] = current_user()["id"]
     session.save()
 
-    scheme = request.environ.get("wsgi.url_scheme", "http")
-    host = request.environ.get("HTTP_HOST", "localhost:8080")
-    redirect_uri = f"{scheme}://{host}{url('/strava/callback')}"
+    redirect_uri = external_url("strava/callback")
 
     STRAVA_CLIENT_ID = os.environ.get("STRAVA_CLIENT_ID") or session.get(
         "STRAVA_CLIENT_ID"
